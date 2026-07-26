@@ -563,7 +563,14 @@
       contrib *= (1+contribGrowth);
     }
 
-    const milestones=[1,5,10,15,20,25,30,35,40].filter(m=>m<=years);
+    let milestones = [1];
+    for (let i = 5; i <= years; i += 5) {
+      milestones.push(i);
+    }
+    // Ensure the final projected year is always appended to the table
+    if (!milestones.includes(years) && years > 0) {
+      milestones.push(years);
+    }
     const tbody = document.querySelector('#g-table tbody');
     
     tbody.innerHTML = milestones.map(m => {
