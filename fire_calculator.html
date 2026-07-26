@@ -36,6 +36,7 @@
   button{margin-top:20px;width:100%;padding:11px;background:var(--accent);color:#fff;border:none;
     border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
   button:hover{opacity:.9;}
+  button:disabled{opacity:0.5;cursor:not-allowed;}
   button.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text);margin-top:8px;}
   .result-hero{font-size:28px;font-weight:700;margin:6px 0 4px;}
   .result-sub{color:var(--muted);font-size:13px;}
@@ -93,7 +94,7 @@
         <input type="number" id="g-return" value="7" step="0.1">
         <label>Years to project</label>
         <input type="number" id="g-years" value="30">
-        <button onclick="calcGrowth()">Project</button>
+        <button id="g-calc-btn">Project</button>
       </div>
       <div>
         <div class="card">
@@ -119,7 +120,7 @@
         <input type="number" id="c-return" value="7" step="0.1">
         <label>Or: fix years and see projected value</label>
         <input type="number" id="c-years" value="25">
-        <button onclick="calcCoast()">Calculate</button>
+        <button id="c-calc-btn">Calculate</button>
       </div>
       <div>
         <div class="card">
@@ -153,7 +154,7 @@
         <label>Annual inflation (%)</label>
         <input type="number" id="d-inflation" value="3" step="0.1">
         <label>Return sequence</label>
-        <select id="d-seqtype" onchange="toggleMonteCarloInput()">
+        <select id="d-seqtype">
           <option value="flat">Flat average return</option>
           <option value="random">Random (volatile) returns</option>
           <option value="bad-early">Bad returns early (worst case)</option>
@@ -166,10 +167,10 @@
         <input type="number" id="d-stdreturn" value="15" step="0.1">
         <div id="d-simcount-wrap" class="hidden">
           <label>Number of simulations</label>
-          <input type="number" id="d-simcount" value="1000">
+          <input type="number" id="d-simcount" value="1000" min="100" max="50000">
         </div>
-        <button onclick="handleDrawdownCalculate()" id="d-calc-btn">Simulate</button>
-        <button class="secondary" onclick="compareSequences()">Compare Forward vs Reversed</button>
+        <button id="d-calc-btn">Simulate</button>
+        <button class="secondary" id="d-compare-btn">Compare Forward vs Reversed</button>
       </div>
       <div>
         <div class="card">
@@ -190,314 +191,357 @@
 <footer>Built for personal financial planning. Not financial advice.</footer>
 
 <script>
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
-  });
-});
+// Encapsulate everything in an IIFE to prevent global scope pollution
+(() => {
 
-function fmt(n){
-  return '$'+Math.round(n).toLocaleString();
-}
-function pct(n){return (n*100).toFixed(2)+'%';}
-
-let coastChart, drawdownChart, growthChart;
-
-// ---------------- ENTER KEY SUPPORT ----------------
-function bindEnterKey(containerId, buttonHandler){
-  const container = document.getElementById(containerId);
-  if(!container) return;
-  container.querySelectorAll('input, select').forEach(el=>{
-    el.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter'){
-        e.preventDefault();
-        buttonHandler();
-      }
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-'+t.dataset.tab).classList.add('active');
     });
   });
-}
 
-// ---------------- COAST FIRE ----------------
-function coastProjection(nestEgg, r, years){
-  let rows=[]; let v=nestEgg;
-  for(let y=0;y<=years;y++){rows.push({year:y,value:v}); v*=(1+r);}
-  return rows;
-}
-function calcCoast(){
-  const nestEgg = parseFloat(document.getElementById('c-nestegg').value);
-  const fireNum = parseFloat(document.getElementById('c-firenum').value);
-  const r = parseFloat(document.getElementById('c-return').value)/100;
-  const fixedYears = parseFloat(document.getElementById('c-years').value);
+  function fmt(n){
+    return '$'+Math.round(n).toLocaleString();
+  }
+  function pct(n){return (n*100).toFixed(2)+'%';}
 
-  let resultEl = document.getElementById('c-result');
-  let subEl = document.getElementById('c-subresult');
-  if(nestEgg<=0 || fireNum<=nestEgg){
-    resultEl.textContent = 'Already at/above target';
-    subEl.textContent = '';
-  } else {
-    const years = Math.log(fireNum/nestEgg)/Math.log(1+r);
-    resultEl.textContent = years.toFixed(1)+' years';
-    subEl.textContent = 'to coast from '+fmt(nestEgg)+' to '+fmt(fireNum)+' at '+ (r*100).toFixed(1)+'% return, no more contributions';
+  let coastChart, drawdownChart, growthChart;
+
+  // ---------------- ENTER KEY SUPPORT ----------------
+  function bindEnterKey(containerId, buttonHandler){
+    const container = document.getElementById(containerId);
+    if(!container) return;
+    container.querySelectorAll('input, select').forEach(el=>{
+      el.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          buttonHandler();
+        }
+      });
+    });
   }
 
-  const impliedYears = (nestEgg<=0||fireNum<=nestEgg) ? fixedYears : Math.log(fireNum/nestEgg)/Math.log(1+r);
-  const projYears = Math.max(fixedYears, Math.ceil(impliedYears)+2);
-  const rows = coastProjection(nestEgg, r, projYears);
-  const fixedRow = rows.find(x=>x.year===Math.round(fixedYears)) || rows[rows.length-1];
-  document.getElementById('c-fixedval').textContent = fmt(fixedRow.value)+' at year '+fixedRow.year;
-
-  const ctx = document.getElementById('coastChart');
-  if(coastChart) coastChart.destroy();
-  coastChart = new Chart(ctx,{
-    type:'line',
-    data:{labels:rows.map(r=>r.year), datasets:[
-      {label:'Portfolio value',data:rows.map(r=>r.value),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0},
-      {label:'FIRE target',data:rows.map(()=>fireNum),borderColor:'#33d69f',borderDash:[6,4],pointRadius:0}
-    ]},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
-      scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
-  });
-}
-
-// ---------------- DRAWDOWN / MONTE CARLO ----------------
-function toggleMonteCarloInput(){
-  const seqType = document.getElementById('d-seqtype').value;
-  const wrap = document.getElementById('d-simcount-wrap');
-  const btn = document.getElementById('d-calc-btn');
-  if(seqType === 'montecarlo'){
-    wrap.classList.remove('hidden');
-    btn.textContent = 'Run Monte Carlo Simulation';
-  } else {
-    wrap.classList.add('hidden');
-    btn.textContent = 'Simulate';
+  // ---------------- COAST FIRE ----------------
+  function coastProjection(nestEgg, r, years){
+    let rows=[]; let v=nestEgg;
+    for(let y=0;y<=years;y++){rows.push({year:y,value:v}); v*=(1+r);}
+    return rows;
   }
-}
 
-function genReturns(type, years, avg, std){
-  let seq=[];
-  if(type==='flat'){ for(let i=0;i<years;i++) seq.push(avg); }
-  else if(type==='random'){ for(let i=0;i<years;i++) seq.push(randNormal(avg,std)); }
-  else if(type==='bad-early'){
-    for(let i=0;i<years;i++){
-      let factor = i < years*0.3 ? -1 : 1;
-      seq.push(avg + factor*std*0.8);
+  function calcCoast(){
+    const nestEgg = parseFloat(document.getElementById('c-nestegg').value) || 0;
+    const fireNum = parseFloat(document.getElementById('c-firenum').value) || 0;
+    const r = parseFloat(document.getElementById('c-return').value)/100 || 0;
+    const fixedYears = parseFloat(document.getElementById('c-years').value) || 0;
+
+    let resultEl = document.getElementById('c-result');
+    let subEl = document.getElementById('c-subresult');
+    let impliedYears = 0;
+
+    if(nestEgg <= 0 || fireNum <= nestEgg){
+      resultEl.textContent = 'Already at/above target';
+      subEl.textContent = '';
+      impliedYears = fixedYears;
+    } else if (r <= 0) {
+      // Guard against division by zero or negative returns
+      resultEl.textContent = 'Never';
+      subEl.textContent = 'Return rate must be > 0% to grow without contributions.';
+      impliedYears = fixedYears;
+    } else {
+      impliedYears = Math.log(fireNum/nestEgg)/Math.log(1+r);
+      resultEl.textContent = impliedYears.toFixed(1)+' years';
+      subEl.textContent = 'to coast from '+fmt(nestEgg)+' to '+fmt(fireNum)+' at '+ (r*100).toFixed(1)+'% return, no more contributions';
     }
-  } else if(type==='bad-late'){
-    for(let i=0;i<years;i++){
-      let factor = i > years*0.7 ? -1 : 1;
-      seq.push(avg + factor*std*0.8);
+
+    const projYears = Math.max(fixedYears, Math.ceil(impliedYears)+2, 10);
+    const rows = coastProjection(nestEgg, r, projYears);
+    const fixedRow = rows.find(x=>x.year===Math.round(fixedYears)) || rows[rows.length-1];
+    document.getElementById('c-fixedval').textContent = fmt(fixedRow.value)+' at year '+fixedRow.year;
+
+    const ctx = document.getElementById('coastChart');
+    if(coastChart) coastChart.destroy();
+    coastChart = new Chart(ctx,{
+      type:'line',
+      data:{labels:rows.map(r=>r.year), datasets:[
+        {label:'Portfolio value',data:rows.map(r=>r.value),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0},
+        {label:'FIRE target',data:rows.map(()=>fireNum),borderColor:'#33d69f',borderDash:[6,4],pointRadius:0}
+      ]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
+        scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+    });
+  }
+
+  // ---------------- DRAWDOWN / MONTE CARLO ----------------
+  document.getElementById('d-seqtype').addEventListener('change', toggleMonteCarloInput);
+
+  function toggleMonteCarloInput(){
+    const seqType = document.getElementById('d-seqtype').value;
+    const wrap = document.getElementById('d-simcount-wrap');
+    const btn = document.getElementById('d-calc-btn');
+    if(seqType === 'montecarlo'){
+      wrap.classList.remove('hidden');
+      btn.textContent = 'Run Monte Carlo Simulation';
+    } else {
+      wrap.classList.add('hidden');
+      btn.textContent = 'Simulate';
     }
   }
-  return seq;
-}
-function randNormal(mean,std){
-  let u=0,v=0;
-  while(u===0) u=Math.random();
-  while(v===0) v=Math.random();
-  return mean + std*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
-}
-function simulateDrawdown(portfolio, years, withdrawalRate, withdrawalAmount, returns, inflation){
-  let balance=portfolio;
-  let withdrawal = withdrawalAmount!=null?withdrawalAmount:portfolio*withdrawalRate;
-  let rows=[]; let success=true; let depYear=null;
-  for(let y=1;y<=years;y++){
-    balance -= withdrawal;
-    if(balance<=0){balance=0; success=false; depYear=y;}
-    const r = returns[y-1]!=null?returns[y-1]:returns[returns.length-1];
-    balance *= (1+r);
-    rows.push({year:y,balance:balance,withdrawal:withdrawal});
-    withdrawal *= (1+inflation);
-    if(!success) break;
+
+  function genReturns(type, years, avg, std){
+    let seq=[];
+    if(type==='flat'){ for(let i=0;i<years;i++) seq.push(avg); }
+    else if(type==='random'){ for(let i=0;i<years;i++) seq.push(randNormal(avg,std)); }
+    else if(type==='bad-early'){
+      for(let i=0;i<years;i++){
+        let factor = i < years*0.3 ? -1 : 1;
+        seq.push(avg + factor*std*0.8);
+      }
+    } else if(type==='bad-late'){
+      for(let i=0;i<years;i++){
+        let factor = i > years*0.7 ? -1 : 1;
+        seq.push(avg + factor*std*0.8);
+      }
+    }
+    return seq;
   }
-  return {rows,success,depYear};
-}
 
-function handleDrawdownCalculate(){
-  const seqType = document.getElementById('d-seqtype').value;
-  if(seqType === 'montecarlo'){
-    calcMonteCarlo();
-  } else {
-    calcDrawdown();
+  function randNormal(mean,std){
+    let u=0,v=0;
+    while(u===0) u=Math.random();
+    while(v===0) v=Math.random();
+    return mean + std*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
   }
-}
 
-function showSingleRunUI(){
-  document.getElementById('d-mc-result').classList.add('hidden');
-  document.getElementById('d-mc-sub').classList.add('hidden');
-  document.getElementById('d-endbal-row').classList.remove('hidden');
-  document.getElementById('d-depyear-row').classList.remove('hidden');
-}
-function showMonteCarloUI(){
-  document.getElementById('d-mc-result').classList.remove('hidden');
-  document.getElementById('d-mc-sub').classList.remove('hidden');
-  document.getElementById('d-endbal-row').classList.add('hidden');
-  document.getElementById('d-depyear-row').classList.add('hidden');
-}
+  function simulateDrawdown(portfolio, years, withdrawalRate, withdrawalAmount, returns, inflation){
+    let balance=portfolio;
+    let withdrawal = withdrawalAmount!=null?withdrawalAmount:portfolio*withdrawalRate;
+    let rows=[]; let success=true; let depYear=null;
+    for(let y=1;y<=years;y++){
+      balance -= withdrawal;
+      if(balance<=0){balance=0; success=false; depYear=y;}
+      const r = returns[y-1]!=null?returns[y-1]:returns[returns.length-1];
+      balance *= (1+r);
+      rows.push({year:y,balance:balance,withdrawal:withdrawal});
+      withdrawal *= (1+inflation);
+      if(!success) break;
+    }
+    return {rows,success,depYear};
+  }
 
-function calcDrawdown(){
-  showSingleRunUI();
-  const portfolio = parseFloat(document.getElementById('d-portfolio').value);
-  const years = parseInt(document.getElementById('d-years').value);
-  const method = document.getElementById('d-method').value;
-  const wVal = parseFloat(document.getElementById('d-withdrawal').value);
-  const inflation = parseFloat(document.getElementById('d-inflation').value)/100;
-  const seqType = document.getElementById('d-seqtype').value;
-  const avg = parseFloat(document.getElementById('d-avgreturn').value)/100;
-  const std = parseFloat(document.getElementById('d-stdreturn').value)/100;
+  function handleDrawdownCalculate(){
+    const seqType = document.getElementById('d-seqtype').value;
+    if(seqType === 'montecarlo'){
+      calcMonteCarlo();
+    } else {
+      calcDrawdown();
+    }
+  }
 
-  const returns = genReturns(seqType, years, avg, std);
-  const wRate = method==='rate'? wVal/100 : null;
-  const wAmt = method==='amount'? wVal : null;
+  function showSingleRunUI(){
+    document.getElementById('d-mc-result').classList.add('hidden');
+    document.getElementById('d-mc-sub').classList.add('hidden');
+    document.getElementById('d-endbal-row').classList.remove('hidden');
+    document.getElementById('d-depyear-row').classList.remove('hidden');
+  }
 
-  const res = simulateDrawdown(portfolio, years, wRate, wAmt, returns, inflation);
-  document.getElementById('d-badge').innerHTML = res.success?
-    '<span class="badge ok">SUCCESS — money lasted full duration</span>':
-    '<span class="badge no">FAILED — depleted in year '+res.depYear+'</span>';
-  document.getElementById('d-endbal').textContent = fmt(res.rows[res.rows.length-1].balance);
-  document.getElementById('d-depyear').textContent = res.depYear || 'N/A';
+  function showMonteCarloUI(){
+    document.getElementById('d-mc-result').classList.remove('hidden');
+    document.getElementById('d-mc-sub').classList.remove('hidden');
+    document.getElementById('d-endbal-row').classList.add('hidden');
+    document.getElementById('d-depyear-row').classList.add('hidden');
+  }
 
-  drawChart('drawdownChart', [res.rows], ['Portfolio balance']);
-}
+  function calcDrawdown(){
+    showSingleRunUI();
+    const portfolio = parseFloat(document.getElementById('d-portfolio').value);
+    const years = parseInt(document.getElementById('d-years').value);
+    const method = document.getElementById('d-method').value;
+    const wVal = parseFloat(document.getElementById('d-withdrawal').value);
+    const inflation = parseFloat(document.getElementById('d-inflation').value)/100;
+    const seqType = document.getElementById('d-seqtype').value;
+    const avg = parseFloat(document.getElementById('d-avgreturn').value)/100;
+    const std = parseFloat(document.getElementById('d-stdreturn').value)/100;
 
-function calcMonteCarlo(){
-  showMonteCarloUI();
-  const portfolio = parseFloat(document.getElementById('d-portfolio').value);
-  const years = parseInt(document.getElementById('d-years').value);
-  const method = document.getElementById('d-method').value;
-  const wVal = parseFloat(document.getElementById('d-withdrawal').value);
-  const inflation = parseFloat(document.getElementById('d-inflation').value)/100;
-  const avg = parseFloat(document.getElementById('d-avgreturn').value)/100;
-  const std = parseFloat(document.getElementById('d-stdreturn').value)/100;
-  const sims = parseInt(document.getElementById('d-simcount').value) || 1000;
+    const returns = genReturns(seqType, years, avg, std);
+    const wRate = method==='rate'? wVal/100 : null;
+    const wAmt = method==='amount'? wVal : null;
 
-  const wRate = method==='rate'? wVal/100 : null;
-  const wAmt = method==='amount'? wVal : null;
-
-  let successes=0;
-  let sampleTrajectories=[];
-  for(let i=0;i<sims;i++){
-    const returns=[];
-    for(let y=0;y<years;y++) returns.push(randNormal(avg,std));
     const res = simulateDrawdown(portfolio, years, wRate, wAmt, returns, inflation);
-    if(res.success) successes++;
-    if(i<30) sampleTrajectories.push(res.rows);
-  }
-  const prob = successes/sims;
-  document.getElementById('d-badge').innerHTML = '';
-  const resultEl = document.getElementById('d-mc-result');
-  resultEl.textContent = (prob*100).toFixed(1)+'%';
-  resultEl.className = 'result-hero ' + (prob>0.85?'success':(prob<0.6?'fail':''));
+    document.getElementById('d-badge').innerHTML = res.success?
+      '<span class="badge ok">SUCCESS — money lasted full duration</span>':
+      '<span class="badge no">FAILED — depleted in year '+res.depYear+'</span>';
+    document.getElementById('d-endbal').textContent = fmt(res.rows[res.rows.length-1].balance);
+    document.getElementById('d-depyear').textContent = res.depYear || 'N/A';
 
-  drawMonteCarloChart(sampleTrajectories);
-}
-
-function compareSequences(){
-  showSingleRunUI();
-  const portfolio = parseFloat(document.getElementById('d-portfolio').value);
-  const years = parseInt(document.getElementById('d-years').value);
-  const method = document.getElementById('d-method').value;
-  const wVal = parseFloat(document.getElementById('d-withdrawal').value);
-  const inflation = parseFloat(document.getElementById('d-inflation').value)/100;
-  const avg = parseFloat(document.getElementById('d-avgreturn').value)/100;
-  const std = parseFloat(document.getElementById('d-stdreturn').value)/100;
-  const wRate = method==='rate'? wVal/100 : null;
-  const wAmt = method==='amount'? wVal : null;
-
-  const base = genReturns('random', years, avg, std);
-  const rev = [...base].reverse();
-
-  const fwd = simulateDrawdown(portfolio, years, wRate, wAmt, base, inflation);
-  const rv = simulateDrawdown(portfolio, years, wRate, wAmt, rev, inflation);
-
-  document.getElementById('d-badge').innerHTML =
-    'Forward: '+(fwd.success?'<span class="badge ok">SUCCESS</span>':'<span class="badge no">FAILED yr '+fwd.depYear+'</span>')+
-    '  &nbsp; Reversed: '+(rv.success?'<span class="badge ok">SUCCESS</span>':'<span class="badge no">FAILED yr '+rv.depYear+'</span>');
-  document.getElementById('d-endbal').textContent = fmt(fwd.rows[fwd.rows.length-1].balance)+' / '+fmt(rv.rows[rv.rows.length-1].balance);
-  document.getElementById('d-depyear').textContent = (fwd.depYear||'N/A')+' / '+(rv.depYear||'N/A');
-
-  drawChart('drawdownChart', [fwd.rows, rv.rows], ['Forward order','Reversed order (same avg return)']);
-}
-
-function drawChart(canvasId, rowsArr, labels){
-  const ctx = document.getElementById(canvasId);
-  if(drawdownChart) drawdownChart.destroy();
-  const colors=['#4f9dff','#ff9f4f','#33d69f'];
-  const maxLen = Math.max(...rowsArr.map(r=>r.length));
-  drawdownChart = new Chart(ctx,{
-    type:'line',
-    data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
-      datasets:rowsArr.map((rows,i)=>({label:labels[i],data:rows.map(r=>r.balance),
-        borderColor:colors[i],backgroundColor:colors[i]+'22',fill:false,tension:.15,pointRadius:0}))},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
-      scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
-        y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
-  });
-}
-
-function drawMonteCarloChart(sampleTrajectories){
-  const ctx = document.getElementById('drawdownChart');
-  if(drawdownChart) drawdownChart.destroy();
-  const maxLen = Math.max(...sampleTrajectories.map(r=>r.length), 1);
-  drawdownChart = new Chart(ctx,{
-    type:'line',
-    data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
-      datasets:sampleTrajectories.map((rows)=>({
-        data:rows.map(r=>r.balance),
-        borderColor: rows[rows.length-1].balance<=0? 'rgba(255,92,92,0.5)':'rgba(79,157,255,0.35)',
-        borderWidth:1, pointRadius:0, fill:false
-      }))},
-    options:{responsive:true,plugins:{legend:{display:false}},
-      scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
-        y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
-  });
-}
-
-// ---------------- GROWTH ----------------
-function calcGrowth(){
-  const start = parseFloat(document.getElementById('g-start').value);
-  const contrib0 = parseFloat(document.getElementById('g-contrib').value);
-  const contribGrowth = parseFloat(document.getElementById('g-contribgrowth').value)/100;
-  const r = parseFloat(document.getElementById('g-return').value)/100;
-  const years = parseInt(document.getElementById('g-years').value);
-
-  let rows=[]; let balance=start; let contrib=contrib0;
-  for(let y=0;y<=years;y++){
-    rows.push({year:y, balance:balance, contrib: y>0?contrib:0});
-    balance = balance*(1+r) + contrib;
-    contrib *= (1+contribGrowth);
+    drawChart('drawdownChart', [res.rows], ['Portfolio balance']);
   }
 
-  const milestones=[1,5,10,15,20,25,30,35,40].filter(m=>m<=years);
-  const tbody = document.querySelector('#g-table tbody');
-  tbody.innerHTML='';
-  milestones.forEach(m=>{
-    const row = rows[m];
-    tbody.innerHTML += `<tr><td>${m}</td><td>${fmt(row.balance)}</td><td>${fmt(row.contrib)}</td></tr>`;
-  });
+  // Refactored to async to prevent UI freezing on high sim counts
+  async function calcMonteCarlo(){
+    showMonteCarloUI();
+    const btn = document.getElementById('d-calc-btn');
+    btn.disabled = true;
+    btn.textContent = 'Calculating...';
 
-  const ctx = document.getElementById('growthChart');
-  if(growthChart) growthChart.destroy();
-  growthChart = new Chart(ctx,{
-    type:'line',
-    data:{labels:rows.map(r=>r.year), datasets:[
-      {label:'Portfolio balance',data:rows.map(r=>r.balance),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0}
-    ]},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
-      scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
-  });
-}
+    const portfolio = parseFloat(document.getElementById('d-portfolio').value);
+    const years = parseInt(document.getElementById('d-years').value);
+    const method = document.getElementById('d-method').value;
+    const wVal = parseFloat(document.getElementById('d-withdrawal').value);
+    const inflation = parseFloat(document.getElementById('d-inflation').value)/100;
+    const avg = parseFloat(document.getElementById('d-avgreturn').value)/100;
+    const std = parseFloat(document.getElementById('d-stdreturn').value)/100;
+    const sims = parseInt(document.getElementById('d-simcount').value) || 1000;
 
-// init
-bindEnterKey('coast-inputs', calcCoast);
-bindEnterKey('drawdown-inputs', handleDrawdownCalculate);
-bindEnterKey('growth-inputs', calcGrowth);
+    const wRate = method==='rate'? wVal/100 : null;
+    const wAmt = method==='amount'? wVal : null;
 
-calcGrowth();
-calcCoast();
-calcDrawdown();
+    const resultEl = document.getElementById('d-mc-result');
+    resultEl.textContent = 'Running...';
+    resultEl.className = 'result-hero';
+    document.getElementById('d-badge').innerHTML = '';
+
+    let successes = 0;
+    let sampleTrajectories = [];
+    const chunkSize = 2000; // Yield to main thread every 2000 iterations
+
+    for(let i = 0; i < sims; i += chunkSize) {
+      const chunkEnd = Math.min(i + chunkSize, sims);
+      for(let j = i; j < chunkEnd; j++){
+        const returns = [];
+        for(let y=0;y<years;y++) returns.push(randNormal(avg,std));
+        const res = simulateDrawdown(portfolio, years, wRate, wAmt, returns, inflation);
+        if(res.success) successes++;
+        if(j < 30) sampleTrajectories.push(res.rows);
+      }
+      // Yield to the main thread to keep UI responsive
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    const prob = successes / sims;
+    resultEl.textContent = (prob*100).toFixed(1)+'%';
+    resultEl.className = 'result-hero ' + (prob>0.85?'success':(prob<0.6?'fail':''));
+    
+    drawMonteCarloChart(sampleTrajectories);
+    btn.disabled = false;
+    btn.textContent = 'Run Monte Carlo Simulation';
+  }
+
+  function compareSequences(){
+    showSingleRunUI();
+    const portfolio = parseFloat(document.getElementById('d-portfolio').value);
+    const years = parseInt(document.getElementById('d-years').value);
+    const method = document.getElementById('d-method').value;
+    const wVal = parseFloat(document.getElementById('d-withdrawal').value);
+    const inflation = parseFloat(document.getElementById('d-inflation').value)/100;
+    const avg = parseFloat(document.getElementById('d-avgreturn').value)/100;
+    const std = parseFloat(document.getElementById('d-stdreturn').value)/100;
+    const wRate = method==='rate'? wVal/100 : null;
+    const wAmt = method==='amount'? wVal : null;
+
+    const base = genReturns('random', years, avg, std);
+    const rev = [...base].reverse();
+
+    const fwd = simulateDrawdown(portfolio, years, wRate, wAmt, base, inflation);
+    const rv = simulateDrawdown(portfolio, years, wRate, wAmt, rev, inflation);
+
+    document.getElementById('d-badge').innerHTML =
+      'Forward: '+(fwd.success?'<span class="badge ok">SUCCESS</span>':'<span class="badge no">FAILED yr '+fwd.depYear+'</span>')+
+      '  &nbsp; Reversed: '+(rv.success?'<span class="badge ok">SUCCESS</span>':'<span class="badge no">FAILED yr '+rv.depYear+'</span>');
+    document.getElementById('d-endbal').textContent = fmt(fwd.rows[fwd.rows.length-1].balance)+' / '+fmt(rv.rows[rv.rows.length-1].balance);
+    document.getElementById('d-depyear').textContent = (fwd.depYear||'N/A')+' / '+(rv.depYear||'N/A');
+
+    drawChart('drawdownChart', [fwd.rows, rv.rows], ['Forward order','Reversed order (same avg return)']);
+  }
+
+  function drawChart(canvasId, rowsArr, labels){
+    const ctx = document.getElementById(canvasId);
+    if(drawdownChart) drawdownChart.destroy();
+    const colors=['#4f9dff','#ff9f4f','#33d69f'];
+    const maxLen = Math.max(...rowsArr.map(r=>r.length));
+    drawdownChart = new Chart(ctx,{
+      type:'line',
+      data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
+        datasets:rowsArr.map((rows,i)=>({label:labels[i],data:rows.map(r=>r.balance),
+          borderColor:colors[i],backgroundColor:colors[i]+'22',fill:false,tension:.15,pointRadius:0}))},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
+        scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
+          y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+    });
+  }
+
+  function drawMonteCarloChart(sampleTrajectories){
+    const ctx = document.getElementById('drawdownChart');
+    if(drawdownChart) drawdownChart.destroy();
+    const maxLen = Math.max(...sampleTrajectories.map(r=>r.length), 1);
+    drawdownChart = new Chart(ctx,{
+      type:'line',
+      data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
+        datasets:sampleTrajectories.map((rows)=>({
+          data:rows.map(r=>r.balance),
+          borderColor: rows[rows.length-1].balance<=0? 'rgba(255,92,92,0.5)':'rgba(79,157,255,0.35)',
+          borderWidth:1, pointRadius:0, fill:false
+        }))},
+      options:{responsive:true,plugins:{legend:{display:false}},
+        scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
+          y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+    });
+  }
+
+  // ---------------- GROWTH ----------------
+  function calcGrowth(){
+    const start = parseFloat(document.getElementById('g-start').value);
+    const contrib0 = parseFloat(document.getElementById('g-contrib').value);
+    const contribGrowth = parseFloat(document.getElementById('g-contribgrowth').value)/100;
+    const r = parseFloat(document.getElementById('g-return').value)/100;
+    const years = parseInt(document.getElementById('g-years').value);
+
+    let rows=[]; let balance=start; let contrib=contrib0;
+    for(let y=0;y<=years;y++){
+      rows.push({year:y, balance:balance, contrib: y>0?contrib:0});
+      balance = balance*(1+r) + contrib;
+      contrib *= (1+contribGrowth);
+    }
+
+    const milestones=[1,5,10,15,20,25,30,35,40].filter(m=>m<=years);
+    const tbody = document.querySelector('#g-table tbody');
+    
+    // Map into an array and join to prevent DOM re-parsing on every iteration
+    tbody.innerHTML = milestones.map(m => {
+      const row = rows[m];
+      return `<tr><td>${m}</td><td>${fmt(row.balance)}</td><td>${fmt(row.contrib)}</td></tr>`;
+    }).join('');
+
+    const ctx = document.getElementById('growthChart');
+    if(growthChart) growthChart.destroy();
+    growthChart = new Chart(ctx,{
+      type:'line',
+      data:{labels:rows.map(r=>r.year), datasets:[
+        {label:'Portfolio balance',data:rows.map(r=>r.balance),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0}
+      ]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
+        scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+    });
+  }
+
+  // Event Listeners
+  document.getElementById('g-calc-btn').addEventListener('click', calcGrowth);
+  document.getElementById('c-calc-btn').addEventListener('click', calcCoast);
+  document.getElementById('d-calc-btn').addEventListener('click', handleDrawdownCalculate);
+  document.getElementById('d-compare-btn').addEventListener('click', compareSequences);
+
+  bindEnterKey('coast-inputs', calcCoast);
+  bindEnterKey('drawdown-inputs', handleDrawdownCalculate);
+  bindEnterKey('growth-inputs', calcGrowth);
+
+  // Initial render
+  calcGrowth();
+  calcCoast();
+  calcDrawdown();
+
+})();
 </script>
 </body>
 </html>
