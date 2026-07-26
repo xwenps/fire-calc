@@ -6,17 +6,35 @@
 <title>FIRE & Retirement Calculator</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  :root{
+  :root {
     --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
     --text:#e8eaf0; --muted:#9aa3b2; --accent:#4f9dff; --accent2:#33d69f;
     --danger:#ff5c5c; --warn:#ffb84f;
   }
+  [data-theme="light"] {
+    --bg:#f4f6f9; --panel:#ffffff; --panel2:#edf1f5; --border:#cbd5e1;
+    --text:#1e293b; --muted:#64748b; --accent:#2563eb; --accent2:#059669;
+    --danger:#dc2626; --warn:#d97706;
+  }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:var(--bg);color:var(--text);}
-  header{padding:24px 32px 8px;}
+    background:var(--bg);color:var(--text);transition:background .2s, color .2s;}
+  header{padding:24px 32px 8px; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;}
   header h1{margin:0 0 4px;font-size:24px;}
   header p{margin:0;color:var(--muted);font-size:14px;}
+  
+  .theme-toggle{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:8px 12px;border-radius:50%;font-size:0;cursor:pointer;width:40px;height:40px;margin:0;
+    display:flex;align-items:center;justify-content:center;transition:transform .2s, background .2s, border-color .2s;}
+  .theme-toggle:hover{opacity:.8;transform:scale(1.05);}
+  .theme-toggle svg { width: 18px; height: 18px; fill: currentColor; }
+
+  /* Sun/Moon visibility depending on theme */
+  .sun-icon { display: none; }
+  .moon-icon { display: block; }
+  [data-theme="light"] .sun-icon { display: block; }
+  [data-theme="light"] .moon-icon { display: none; }
+
   .tabs{display:flex;gap:4px;padding:0 32px;border-bottom:1px solid var(--border);
     margin-top:16px;flex-wrap:wrap;}
   .tab{padding:10px 18px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;
@@ -68,11 +86,19 @@
   footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
 </style>
 </head>
-<body>
+<body data-theme="dark">
 
 <header>
-  <h1>FIRE &amp; Retirement Calculator</h1>
-  <p>Coast FIRE • Retirement Drawdown &amp; Monte Carlo • Portfolio Growth Projection</p>
+  <div>
+    <h1>FIRE &amp; Retirement Calculator</h1>
+    <p>Coast FIRE • Retirement Drawdown &amp; Monte Carlo • Portfolio Growth Projection</p>
+  </div>
+  <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle theme">
+    <!-- Sun Icon -->
+    <svg class="sun-icon" viewBox="0 0 24 24"><path d="M12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM11 1h2v3h-2zm0 19h2v3h-2zM3.51 4.93l1.42 1.42 2.12-2.12-1.42-1.42zm14.85 14.85l1.42 1.42 2.12-2.12-1.42-1.42zM1 11h3v2H1zm19 0h3v2h-3zM4.93 20.49l1.42-1.42 2.12 2.12-1.42 1.42zm14.85-14.85l1.42-1.42 2.12 2.12-1.42 1.42z"/></svg>
+    <!-- Moon Icon -->
+    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M12.3 2c-4.99 0-9 4.01-9 9 0 3.25 1.76 6.09 4.39 7.64.44.26.54.85.22 1.25-.57.74-.2 1.81.65 2.11 1.25.43 2.61.66 4.01.66 5.52 0 10-4.48 10-10S17.82 2 12.3 2zm0 18c-1.12 0-2.19-.24-3.18-.68.61-.43 1.05-1.11 1.14-1.9.11-.98-.31-1.92-1.09-2.48-1.57-1.14-2.58-2.96-2.58-4.94 0-3.86 3.14-7 7-7s7 3.14 7 7-3.14 7-7 7z"/></svg>
+  </button>
 </header>
 
 <div class="tabs">
@@ -154,7 +180,7 @@
           <option value="rate">% of initial portfolio</option>
           <option value="amount">Fixed dollar amount</option>
         </select>
-        <label id="d-withdrawal-label">Withdrawal rate (%) / amount ($)</label>
+        <label id="d-withdrawal-label">Withdrawal rate (%)</label>
         <input type="text" data-type="currency" id="d-withdrawal" value="4" min="0.1" max="1000000" step="0.1">
         <label>Annual inflation (%)</label>
         <input type="number" id="d-inflation" value="0" min="-10" max="50" step="0.1">
@@ -209,7 +235,6 @@
 
 <script>
 (() => {
-  // S&P 500 Historical Annual Total Returns (1928 - 2023)
   const HISTORICAL_RETURNS = [
     0.4381, -0.0830, -0.2512, -0.4384, -0.0864, 0.4998, -0.0119, 0.4674, 0.3194, -0.3534,
     0.2928, -0.0110, -0.1067, -0.1277, 0.1917, 0.2506, 0.1903, 0.3582, -0.0818, 0.0520,
@@ -223,7 +248,39 @@
     -0.0438, 0.3149, 0.1840, 0.2871, -0.1811, 0.2629
   ];
 
-  // --- Currency Input Formatting Helpers ---
+  let coastChart, drawdownChart, growthChart;
+
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const bodyEl = document.body;
+
+  function setTheme(theme, refreshCharts = true) {
+    bodyEl.setAttribute('data-theme', theme);
+    localStorage.setItem('fire_calc_theme', theme);
+    themeToggleBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    if (refreshCharts) {
+      calcGrowth();
+      calcCoast();
+      calcDrawdown();
+    }
+  }
+
+  themeToggleBtn.addEventListener('click', () => {
+    const currentTheme = bodyEl.getAttribute('data-theme');
+    setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  });
+
+  const savedTheme = localStorage.getItem('fire_calc_theme') || 'dark';
+  setTheme(savedTheme, false);
+
+  function getThemeColors() {
+    const isDark = bodyEl.getAttribute('data-theme') === 'dark';
+    return {
+      text: isDark ? '#e8eaf0' : '#1e293b',
+      muted: isDark ? '#9aa3b2' : '#64748b',
+      grid: isDark ? '#2a2f3a' : '#cbd5e1'
+    };
+  }
+
   function formatNumberWithCommas(n) {
     if (n === '' || isNaN(n)) return '';
     return Number(n).toLocaleString('en-US');
@@ -231,11 +288,9 @@
 
   function initCurrencyInputs() {
     document.querySelectorAll('input[data-type="currency"]').forEach(input => {
-      // Set initial formatted value
       input.value = formatNumberWithCommas(input.value);
 
       input.addEventListener('focus', function() {
-        // Strip commas when editing so user can type freely
         this.value = this.value.replace(/,/g, '');
       });
 
@@ -277,8 +332,6 @@
     el.value = el.dataset.type === 'currency' ? formatNumberWithCommas(val) : val;
     return val;
   }
-
-  let coastChart, drawdownChart, growthChart;
 
   function bindEnterKey(containerId, buttonHandler){
     const container = document.getElementById(containerId);
@@ -329,6 +382,7 @@
     const fixedRow = rows.find(x=>x.year===Math.round(fixedYears)) || rows[rows.length-1];
     document.getElementById('c-fixedval').textContent = fmt(fixedRow.value)+' at year '+fixedRow.year;
 
+    const colors = getThemeColors();
     const ctx = document.getElementById('coastChart');
     if(coastChart) coastChart.destroy();
     coastChart = new Chart(ctx,{
@@ -337,8 +391,8 @@
         {label:'Portfolio value',data:rows.map(r=>r.value),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0},
         {label:'FIRE target',data:rows.map(()=>fireNum),borderColor:'#33d69f',borderDash:[6,4],pointRadius:0}
       ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e8eaf0'}}},
-        scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},
+        scales:{x:{ticks:{color:colors.muted},grid:{color:colors.grid}},y:{ticks:{color:colors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:colors.grid}}}}
     });
   }
 
@@ -544,7 +598,6 @@
     const wRate = method==='rate'? wVal/100 : null;
     const wAmt = method==='amount'? wVal : null;
 
-    // Pull selected sequence type from dropdown instead of hardcoding 'random'
     const seqType = document.getElementById('d-seqtype').value;
     const base = genReturns(seqType, years, avg, std);
     const rev = [...base].reverse();
@@ -564,16 +617,17 @@
   function drawChart(canvasId, rowsArr, labels){
     const ctx = document.getElementById(canvasId);
     if(drawdownChart) drawdownChart.destroy();
-    const colors=['#4f9dff','#ff9f4f','#33d69f'];
+    const colors=['#2563eb','#d97706','#059669'];
     const maxLen = Math.max(...rowsArr.map(r=>r.length));
+    const themeColors = getThemeColors();
     drawdownChart = new Chart(ctx,{
       type:'line',
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
         datasets:rowsArr.map((rows,i)=>({label:labels[i],data:rows.map(r=>r.balance),
           borderColor:colors[i],backgroundColor:colors[i]+'22',fill:false,tension:.15,pointRadius:0}))},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e8eaf0'}}},
-        scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
-          y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:themeColors.text}}},
+        scales:{x:{title:{display:true,text:'Year',color:themeColors.muted},ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},
+          y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
   }
 
@@ -581,17 +635,18 @@
     const ctx = document.getElementById('drawdownChart');
     if(drawdownChart) drawdownChart.destroy();
     const maxLen = Math.max(...sampleTrajectories.map(r=>r.length), 1);
+    const themeColors = getThemeColors();
     drawdownChart = new Chart(ctx,{
       type:'line',
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
         datasets:sampleTrajectories.map((rows)=>({
           data:rows.map(r=>r.balance),
-          borderColor: rows[rows.length-1].balance<=0? 'rgba(255,92,92,0.5)':'rgba(79,157,255,0.35)',
+          borderColor: rows[rows.length-1].balance<=0? 'rgba(220,38,38,0.5)':'rgba(37,99,235,0.35)',
           borderWidth:1, pointRadius:0, fill:false
         }))},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
-          y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+        scales:{x:{title:{display:true,text:'Year',color:themeColors.muted},ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},
+          y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
   }
 
@@ -624,22 +679,21 @@
       return `<tr><td>${m}</td><td>${fmt(row.balance)}</td><td>${fmt(row.contrib)}</td></tr>`;
     }).join('');
 
+    const themeColors = getThemeColors();
     const ctx = document.getElementById('growthChart');
     if(growthChart) growthChart.destroy();
     growthChart = new Chart(ctx,{
       type:'line',
       data:{labels:rows.map(r=>r.year), datasets:[
-        {label:'Portfolio balance',data:rows.map(r=>r.balance),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0}
+        {label:'Portfolio balance',data:rows.map(r=>r.balance),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.2,pointRadius:0}
       ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e8eaf0'}}},
-        scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:themeColors.text}}},
+        scales:{x:{ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
   }
 
-  // Initialize currency inputs formatting
   initCurrencyInputs();
 
-  // Event Listeners
   document.getElementById('g-calc-btn').addEventListener('click', calcGrowth);
   document.getElementById('c-calc-btn').addEventListener('click', calcCoast);
   document.getElementById('d-calc-btn').addEventListener('click', handleDrawdownCalculate);
@@ -649,7 +703,6 @@
   bindEnterKey('drawdown-inputs', handleDrawdownCalculate);
   bindEnterKey('growth-inputs', calcGrowth);
 
-  // Initial render
   calcGrowth();
   calcCoast();
   calcDrawdown();
