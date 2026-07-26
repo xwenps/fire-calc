@@ -47,8 +47,15 @@
     font-size:13px;}
   .stat-row:last-child{border-bottom:none;}
   .stat-row span:last-child{font-weight:600;}
-  .chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;
-    margin-top:20px;}
+  .chart-wrap{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    margin-top:20px;
+    position: relative; /* Required for Chart.js */
+    min-height: 300px;  /* Prevents vertical squishing on mobile */
+  }
   .success{color:var(--accent2);}
   .fail{color:var(--danger);}
   table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
@@ -303,7 +310,7 @@
         {label:'Portfolio value',data:rows.map(r=>r.value),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0},
         {label:'FIRE target',data:rows.map(()=>fireNum),borderColor:'#33d69f',borderDash:[6,4],pointRadius:0}
       ]},
-      options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e8eaf0'}}},
         scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
     });
   }
@@ -524,7 +531,7 @@
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
         datasets:rowsArr.map((rows,i)=>({label:labels[i],data:rows.map(r=>r.balance),
           borderColor:colors[i],backgroundColor:colors[i]+'22',fill:false,tension:.15,pointRadius:0}))},
-      options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e8eaf0'}}},
         scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
           y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
     });
@@ -542,7 +549,7 @@
           borderColor: rows[rows.length-1].balance<=0? 'rgba(255,92,92,0.5)':'rgba(79,157,255,0.35)',
           borderWidth:1, pointRadius:0, fill:false
         }))},
-      options:{responsive:true,plugins:{legend:{display:false}},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{title:{display:true,text:'Year',color:'#9aa3b2'},ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},
           y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
     });
@@ -585,7 +592,7 @@
       data:{labels:rows.map(r=>r.year), datasets:[
         {label:'Portfolio balance',data:rows.map(r=>r.balance),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0}
       ]},
-      options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaf0'}}},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#e8eaf0'}}},
         scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
     });
   }
