@@ -53,8 +53,8 @@
     border-radius:12px;
     padding:20px;
     margin-top:20px;
-    position: relative; /* Required for Chart.js */
-    min-height: 300px;  /* Prevents vertical squishing on mobile */
+    position: relative;
+    min-height: 300px;
   }
   .success{color:var(--accent2);}
   .fail{color:var(--danger);}
@@ -62,11 +62,6 @@
   th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);}
   th:first-child, td:first-child{text-align:left;}
   th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;}
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .hint{font-size:12px;color:var(--muted);margin-top:4px;}
-  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;}
-  .badge.ok{background:rgba(51,214,159,.15);color:var(--accent2);}
-  .badge.no{background:rgba(255,92,92,.15);color:var(--danger);}
   .info-box{background:var(--panel2);border-left:3px solid var(--accent);padding:12px 14px;border-radius:6px;
     font-size:13px;color:var(--muted);margin-bottom:16px;}
   .hidden{display:none !important;}
@@ -95,9 +90,9 @@
       <div class="card" id="growth-inputs">
         <h3>Inputs</h3>
         <label>Starting value ($)</label>
-        <input type="number" id="g-start" value="100000" min="0" max="100000000" step="1000">
+        <input type="text" data-type="currency" id="g-start" value="100000" min="0" max="100000000" step="1000">
         <label>Annual contribution ($)</label>
-        <input type="number" id="g-contrib" value="20000" min="0" max="10000000" step="100">
+        <input type="text" data-type="currency" id="g-contrib" value="20000" min="0" max="10000000" step="100">
         <label>Contribution growth / year (%)</label>
         <input type="number" id="g-contribgrowth" value="0" min="-50" max="50" step="0.1">
         <label>Expected annual return (%)</label>
@@ -123,9 +118,9 @@
       <div class="card" id="coast-inputs">
         <h3>Inputs</h3>
         <label>Current nest egg ($)</label>
-        <input type="number" id="c-nestegg" value="400000" min="0" max="100000000" step="1000">
+        <input type="text" data-type="currency" id="c-nestegg" value="400000" min="0" max="100000000" step="1000">
         <label>FIRE number / target ($)</label>
-        <input type="number" id="c-firenum" value="2000000" min="1" max="100000000" step="1000">
+        <input type="text" data-type="currency" id="c-firenum" value="2000000" min="1" max="100000000" step="1000">
         <label>Expected annual return (%)</label>
         <input type="number" id="c-return" value="7" min="-50" max="100" step="0.1">
         <label>Or: fix years and see projected value</label>
@@ -151,7 +146,7 @@
       <div class="card" id="drawdown-inputs">
         <h3>Inputs</h3>
         <label>Starting portfolio ($)</label>
-        <input type="number" id="d-portfolio" value="1000000" min="0" max="100000000" step="1000">
+        <input type="text" data-type="currency" id="d-portfolio" value="1000000" min="0" max="100000000" step="1000">
         <label>Years in retirement</label>
         <input type="number" id="d-years" value="30" min="1" max="100" step="1">
         <label>Withdrawal method</label>
@@ -159,8 +154,8 @@
           <option value="rate">% of initial portfolio</option>
           <option value="amount">Fixed dollar amount</option>
         </select>
-        <label>Withdrawal rate (%) / amount ($)</label>
-        <input type="number" id="d-withdrawal" value="4" min="0.1" max="1000000" step="0.1">
+        <label id="d-withdrawal-label">Withdrawal rate (%) / amount ($)</label>
+        <input type="text" data-type="currency" id="d-withdrawal" value="4" min="0.1" max="1000000" step="0.1">
         <label>Annual inflation (%)</label>
         <input type="number" id="d-inflation" value="0" min="-10" max="50" step="0.1">
         <label>Return sequence</label>
@@ -228,6 +223,41 @@
     -0.0438, 0.3149, 0.1840, 0.2871, -0.1811, 0.2629
   ];
 
+  // --- Currency Input Formatting Helpers ---
+  function formatNumberWithCommas(n) {
+    if (n === '' || isNaN(n)) return '';
+    return Number(n).toLocaleString('en-US');
+  }
+
+  function initCurrencyInputs() {
+    document.querySelectorAll('input[data-type="currency"]').forEach(input => {
+      // Set initial formatted value
+      input.value = formatNumberWithCommas(input.value);
+
+      input.addEventListener('focus', function() {
+        // Strip commas when editing so user can type freely
+        this.value = this.value.replace(/,/g, '');
+      });
+
+      input.addEventListener('blur', function() {
+        let val = parseFloat(this.value.replace(/,/g, ''));
+        if (!isNaN(val)) {
+          this.value = formatNumberWithCommas(val);
+        } else {
+          this.value = '';
+        }
+      });
+    });
+  }
+
+  function getCleanInputValue(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    let valStr = el.value.toString().replace(/,/g, '');
+    let val = parseFloat(valStr);
+    return isNaN(val) ? 0 : val;
+  }
+
   document.querySelectorAll('.tab').forEach(t=>{
     t.addEventListener('click',()=>{
       document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -238,21 +268,18 @@
   });
 
   function fmt(n){ return '$'+Math.round(n).toLocaleString(); }
-  function pct(n){ return (n*100).toFixed(2)+'%'; }
 
-  // UI Clamping Helper Function
   function getClampedVal(id, min, max, fallback){
     const el = document.getElementById(id);
-    let val = parseFloat(el.value);
+    let val = getCleanInputValue(id);
     if(isNaN(val)) val = fallback;
     val = Math.min(Math.max(val, min), max);
-    el.value = val; // Force UI to reflect clean data
+    el.value = el.dataset.type === 'currency' ? formatNumberWithCommas(val) : val;
     return val;
   }
 
   let coastChart, drawdownChart, growthChart;
 
-  // ---------------- ENTER KEY SUPPORT ----------------
   function bindEnterKey(containerId, buttonHandler){
     const container = document.getElementById(containerId);
     if(!container) return;
@@ -315,9 +342,20 @@
     });
   }
 
-  // ---------------- DRAWDOWN / MONTE CARLO ----------------
+  // ---------------- DRAWDOWN + MONTE CARLO ----------------
   document.getElementById('d-seqtype').addEventListener('change', toggleMonteCarloInput);
   document.getElementById('d-use-historical').addEventListener('change', toggleHistoricalInputs);
+  document.getElementById('d-method').addEventListener('change', updateWithdrawalLabel);
+
+  function updateWithdrawalLabel(){
+    const method = document.getElementById('d-method').value;
+    const label = document.getElementById('d-withdrawal-label');
+    if(method === 'rate'){
+      label.textContent = 'Withdrawal rate (%)';
+    } else {
+      label.textContent = 'Withdrawal amount ($)';
+    }
+  }
 
   function toggleMonteCarloInput(){
     const seqType = document.getElementById('d-seqtype').value;
@@ -432,8 +470,8 @@
 
     const res = simulateDrawdown(portfolio, years, wRate, wAmt, returns, inflation);
     document.getElementById('d-badge').innerHTML = res.success?
-      '<span class="badge ok">SUCCESS — money lasted full duration</span>':
-      '<span class="badge no">FAILED — depleted in year '+res.depYear+'</span>';
+      '<span class="badge ok" style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(51,214,159,.15);color:var(--accent2)">SUCCESS — money lasted full duration</span>':
+      '<span class="badge no" style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(255,92,92,.15);color:var(--danger)">FAILED — depleted in year '+res.depYear+'</span>';
     document.getElementById('d-endbal').textContent = fmt(res.rows[res.rows.length-1].balance);
     document.getElementById('d-depyear').textContent = res.depYear || 'N/A';
 
@@ -506,19 +544,21 @@
     const wRate = method==='rate'? wVal/100 : null;
     const wAmt = method==='amount'? wVal : null;
 
-    const base = genReturns('random', years, avg, std);
+    // Pull selected sequence type from dropdown instead of hardcoding 'random'
+    const seqType = document.getElementById('d-seqtype').value;
+    const base = genReturns(seqType, years, avg, std);
     const rev = [...base].reverse();
 
     const fwd = simulateDrawdown(portfolio, years, wRate, wAmt, base, inflation);
     const rv = simulateDrawdown(portfolio, years, wRate, wAmt, rev, inflation);
 
     document.getElementById('d-badge').innerHTML =
-      'Forward: '+(fwd.success?'<span class="badge ok">SUCCESS</span>':'<span class="badge no">FAILED yr '+fwd.depYear+'</span>')+
-      '  &nbsp; Reversed: '+(rv.success?'<span class="badge ok">SUCCESS</span>':'<span class="badge no">FAILED yr '+rv.depYear+'</span>');
+      'Forward: '+(fwd.success?'<span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(51,214,159,.15);color:var(--accent2)">SUCCESS</span>':'<span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(255,92,92,.15);color:var(--danger)">FAILED yr '+fwd.depYear+'</span>')+
+      '  &nbsp; Reversed: '+(rv.success?'<span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(51,214,159,.15);color:var(--accent2)">SUCCESS</span>':'<span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(255,92,92,.15);color:var(--danger)">FAILED yr '+rv.depYear+'</span>');
     document.getElementById('d-endbal').textContent = fmt(fwd.rows[fwd.rows.length-1].balance)+' / '+fmt(rv.rows[rv.rows.length-1].balance);
     document.getElementById('d-depyear').textContent = (fwd.depYear||'N/A')+' / '+(rv.depYear||'N/A');
 
-    drawChart('drawdownChart', [fwd.rows, rv.rows], ['Forward order','Reversed order (same avg return)']);
+    drawChart('drawdownChart', [fwd.rows, rv.rows], ['Forward order ('+seqType+')','Reversed order']);
   }
 
   function drawChart(canvasId, rowsArr, labels){
@@ -574,7 +614,6 @@
     for (let i = 5; i <= years; i += 5) {
       milestones.push(i);
     }
-    // Ensure the final projected year is always appended to the table
     if (!milestones.includes(years) && years > 0) {
       milestones.push(years);
     }
@@ -596,6 +635,9 @@
         scales:{x:{ticks:{color:'#9aa3b2'},grid:{color:'#2a2f3a'}},y:{ticks:{color:'#9aa3b2',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'#2a2f3a'}}}}
     });
   }
+
+  // Initialize currency inputs formatting
+  initCurrencyInputs();
 
   // Event Listeners
   document.getElementById('g-calc-btn').addEventListener('click', calcGrowth);
