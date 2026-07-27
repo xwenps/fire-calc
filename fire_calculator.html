@@ -324,6 +324,23 @@
 
   let accumChart, drawdownChart;
 
+  const defaultTooltipConfig = {
+    mode: 'index',
+    intersect: false,
+    callbacks: {
+      label: function(context) {
+        let label = context.dataset.label || '';
+        if (label) {
+          label += ': ';
+        }
+        if (context.parsed.y !== null) {
+          label += '$' + Math.round(context.parsed.y).toLocaleString();
+        }
+        return label;
+      }
+    }
+  };
+
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   const bodyEl = document.body;
 
@@ -528,7 +545,14 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: themeColors.text } } },
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: { 
+          legend: { labels: { color: themeColors.text } },
+          tooltip: defaultTooltipConfig
+        },
         scales: {
           x: { ticks: { color: themeColors.muted }, grid: { color: themeColors.grid } },
           y: { ticks: { color: themeColors.muted, callback: v => '$' + (v / 1000).toFixed(0) + 'k' }, grid: { color: themeColors.grid } }
@@ -799,7 +823,17 @@
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
         datasets:rowsArr.map((rows,i)=>({label:labels[i],data:rows.map(r=>r.balance),
           borderColor:colors[i],backgroundColor:colors[i]+'22',fill:false,tension:.15,pointRadius:0}))},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:themeColors.text}}},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{
+          mode:'index',
+          intersect:false
+        },
+        plugins:{
+          legend:{labels:{color:themeColors.text}},
+          tooltip: defaultTooltipConfig
+        },
         scales:{x:{title:{display:true,text:'Year',color:themeColors.muted},ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},
           y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
@@ -813,12 +847,31 @@
     drawdownChart = new Chart(ctx,{
       type:'line',
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
-        datasets:sampleTrajectories.map((rows)=>({
+        datasets:sampleTrajectories.map((rows, idx)=>({
+          label:`Simulation ${idx + 1}`,
           data:rows.map(r=>r.balance),
           borderColor: rows[rows.length-1].balance<=0? 'rgba(220,38,38,0.5)':'rgba(37,99,235,0.35)',
           borderWidth:1, pointRadius:0, fill:false
         }))},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{
+          mode:'nearest',
+          intersect:false
+        },
+        plugins:{
+          legend:{display:false},
+          tooltip: {
+            mode: 'nearest',
+            intersect: false,
+            callbacks: {
+              label: function(context) {
+                return `$${Math.round(context.parsed.y).toLocaleString()}`;
+              }
+            }
+          }
+        },
         scales:{x:{title:{display:true,text:'Year',color:themeColors.muted},ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},
           y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
