@@ -42,9 +42,10 @@
   .container{padding:24px 32px 60px;max-width:1200px;margin:0 auto;}
   .panel{display:none;}
   .panel.active{display:block;}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:24px;}
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:24px;}
   @media(max-width:900px){.grid{grid-template-columns:1fr;}}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;}
+  .card:last-child{margin-bottom:0;}
   .card h3{margin-top:0;font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
   label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px;}
   .inline-label{display:inline-flex; align-items:center; gap:8px; cursor:pointer; margin-top:8px;}
@@ -58,8 +59,12 @@
   button:hover{opacity:.9;}
   button:disabled{opacity:0.5;cursor:not-allowed;}
   button.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text);margin-top:8px;}
-  .result-hero{font-size:28px;font-weight:700;margin:6px 0 4px;}
+  .result-hero{font-size:26px;font-weight:700;margin:6px 0 2px;}
   .result-sub{color:var(--muted);font-size:13px;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .stat-card{background:var(--panel2);padding:14px;border-radius:8px;border:1px solid var(--border);}
+  .stat-card .label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .stat-card .val{font-size:18px;font-weight:700;color:var(--text);}
   .stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);
     font-size:13px;}
   .stat-row:last-child{border-bottom:none;}
@@ -69,9 +74,8 @@
     border:1px solid var(--border);
     border-radius:12px;
     padding:20px;
-    margin-top:20px;
     position: relative;
-    min-height: 300px;
+    min-height: 320px;
   }
   .success{color:var(--accent2);}
   .fail{color:var(--danger);}
@@ -91,6 +95,37 @@
     background: var(--panel);
     padding: 0 12px 12px;
   }
+  
+  /* Collapsible Drawer */
+  .drawer-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 16px;
+    width: 100%;
+    transition: background 0.2s;
+  }
+  .drawer-toggle:hover { background: var(--border); }
+  .drawer-toggle svg { width: 16px; height: 16px; transition: transform 0.2s; }
+  .drawer-toggle.open svg { transform: rotate(180deg); }
+  .drawer-content {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    padding: 14px;
+    margin-top: -4px;
+  }
+
   footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
 </style>
 </head>
@@ -99,10 +134,9 @@
 <header>
   <div>
     <h1>FIRE &amp; Retirement Calculator</h1>
-    <p>Coast FIRE • Retirement Drawdown &amp; Monte Carlo • Portfolio Growth Projection</p>
+    <p>Accumulation &amp; Coast Planner • Retirement Drawdown &amp; Monte Carlo</p>
   </div>
   <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle theme">
-    <!-- Clean Sun Icon -->
     <svg class="sun-icon" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="4"></circle>
       <path d="M12 2v2"></path><path d="M12 20v2"></path>
@@ -110,7 +144,6 @@
       <path d="M2 12h2"></path><path d="M20 12h2"></path>
       <path d="M4.93 19.07l1.41-1.41"></path><path d="M17.66 6.34l1.41-1.41"></path>
     </svg>
-    <!-- Clean Crescent Moon Icon -->
     <svg class="moon-icon" viewBox="0 0 24 24">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" style="fill:currentColor; stroke:none;"></path>
     </svg>
@@ -118,65 +151,78 @@
 </header>
 
 <div class="tabs">
-  <div class="tab active" data-tab="growth">Growth Projector</div>
-  <div class="tab" data-tab="coast">Coast FIRE</div>
+  <div class="tab active" data-tab="accumulate">Accumulation &amp; Coast Planner</div>
   <div class="tab" data-tab="drawdown">Retirement Drawdown</div>
 </div>
 
 <div class="container">
 
-  <!-- GROWTH -->
-  <div class="panel active" id="panel-growth">
-    <div class="info-box">Projects portfolio value over time given a starting balance and recurring annual contributions, shown at standard milestone years.</div>
+  <!-- ACCUMULATION & COAST PLANNER -->
+  <div class="panel active" id="panel-accumulate">
+    <div class="info-box">Project your portfolio's growth with ongoing savings alongside your "Coast FIRE" trajectory (what happens if you stop contributing today).</div>
     <div class="grid">
-      <div class="card" id="growth-inputs">
-        <h3>Inputs</h3>
-        <label>Starting value ($)</label>
-        <input type="text" data-type="currency" id="g-start" value="100000" min="0" max="100000000" step="1000">
-        <label>Annual contribution ($)</label>
-        <input type="text" data-type="currency" id="g-contrib" value="20000" min="0" max="10000000" step="100">
-        <label>Contribution growth / year (%)</label>
-        <input type="number" id="g-contribgrowth" value="0" min="-50" max="50" step="0.1">
-        <label>Expected annual return (%)</label>
-        <input type="number" id="g-return" value="7" min="-50" max="100" step="0.1">
-        <label>Years to project</label>
-        <input type="number" id="g-years" value="30" min="1" max="100" step="1">
-        <button id="g-calc-btn">Project</button>
-      </div>
       <div>
-        <div class="card">
-          <h3>Milestones</h3>
-          <table id="g-table"><thead><tr><th>Year</th><th>Balance</th><th>Contribution</th></tr></thead><tbody></tbody></table>
-        </div>
-        <div class="chart-wrap"><canvas id="growthChart" height="110"></canvas></div>
-      </div>
-    </div>
-  </div>
+        <div class="card" id="accum-inputs">
+          <h3>Primary Inputs</h3>
+          <label>Current portfolio ($)</label>
+          <input type="text" data-type="currency" id="a-portfolio" value="100000" min="0" max="100000000" step="1000">
+          
+          <label>Annual contribution ($)</label>
+          <input type="text" data-type="currency" id="a-contrib" value="20000" min="0" max="10000000" step="100">
+          
+          <label>Expected annual return (%)</label>
+          <input type="number" id="a-return" value="7" min="-50" max="100" step="0.1">
+          
+          <label>Target time horizon (Years)</label>
+          <input type="number" id="a-years" value="25" min="1" max="100" step="1">
 
-  <!-- COAST FIRE -->
-  <div class="panel" id="panel-coast">
-    <div class="info-box">Coast FIRE = you stop contributing new money and let compounding alone carry your current nest egg to your FIRE number by a target age.</div>
-    <div class="grid">
-      <div class="card" id="coast-inputs">
-        <h3>Inputs</h3>
-        <label>Current nest egg ($)</label>
-        <input type="text" data-type="currency" id="c-nestegg" value="400000" min="0" max="100000000" step="1000">
-        <label>FIRE number / target ($)</label>
-        <input type="text" data-type="currency" id="c-firenum" value="2000000" min="1" max="100000000" step="1000">
-        <label>Expected annual return (%)</label>
-        <input type="number" id="c-return" value="7" min="-50" max="100" step="0.1">
-        <label>Or: fix years and see projected value</label>
-        <input type="number" id="c-years" value="25" min="1" max="100" step="1">
-        <button id="c-calc-btn">Calculate</button>
-      </div>
-      <div>
-        <div class="card">
-          <h3>Result</h3>
-          <div class="result-hero" id="c-result">--</div>
-          <div class="result-sub" id="c-subresult"></div>
-          <div class="stat-row"><span>Projected value at fixed years</span><span id="c-fixedval">--</span></div>
+          <button class="drawer-toggle" id="accum-drawer-btn" type="button">
+            <span>Advanced &amp; FIRE Targets</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          
+          <div class="drawer-content hidden" id="accum-drawer">
+            <label>FIRE target number ($)</label>
+            <input type="text" data-type="currency" id="a-firenum" value="1500000" min="0" max="100000000" step="1000">
+            <div class="result-sub" style="margin-top:2px;">Optional: Leave empty or 0 to disable Coast FIRE metrics.</div>
+
+            <label>Contribution growth / year (%)</label>
+            <input type="number" id="a-contribgrowth" value="0" min="-50" max="50" step="0.1">
+          </div>
+
+          <button id="a-calc-btn">Calculate</button>
         </div>
-        <div class="chart-wrap"><canvas id="coastChart" height="110"></canvas></div>
+      </div>
+
+      <div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="label">Projected Portfolio</div>
+            <div class="val" id="a-stat-proj">--</div>
+            <div class="result-sub" id="a-stat-proj-sub">with contributions</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Coast FIRE Status</div>
+            <div class="val" id="a-stat-coast">--</div>
+            <div class="result-sub" id="a-stat-coast-sub">to reach FIRE target without extra savings</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Growth Milestones</h3>
+          <table id="a-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Active Savings Path</th>
+                <th>Coast FIRE Path</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="chart-wrap"><canvas id="accumChart" height="110"></canvas></div>
       </div>
     </div>
   </div>
@@ -276,7 +322,31 @@
     -0.0438, 0.3149, 0.1840, 0.2871, -0.1811, 0.2629
   ];
 
-  let coastChart, drawdownChart, growthChart;
+  let accumChart, drawdownChart;
+
+  const defaultTooltipConfig = {
+    mode: 'index',
+    intersect: false,
+    callbacks: {
+      label: function(context) {
+        let label = context.dataset.label || '';
+        if (label) {
+          label += ': ';
+        }
+        if (context.parsed.y !== null) {
+          label += '$' + Math.round(context.parsed.y).toLocaleString();
+        }
+        return label;
+      },
+      labelColor: function(context) {
+        const color = context.dataset.borderColor;
+        return {
+          borderColor: color,
+          backgroundColor: color
+        };
+      }
+    }
+  };
 
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   const bodyEl = document.body;
@@ -286,8 +356,7 @@
     localStorage.setItem('fire_calc_theme', theme);
     themeToggleBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
     if (refreshCharts) {
-      calcGrowth();
-      calcCoast();
+      calcAccumulation();
       calcDrawdown();
     }
   }
@@ -374,57 +443,128 @@
     });
   }
 
-  // ---------------- COAST FIRE ----------------
-  function coastProjection(nestEgg, r, years){
-    let rows=[]; let v=nestEgg;
-    for(let y=0;y<=years;y++){rows.push({year:y,value:v}); v*=(1+r);}
-    return rows;
-  }
+  // Drawer Toggle
+  const accumDrawerBtn = document.getElementById('accum-drawer-btn');
+  const accumDrawer = document.getElementById('accum-drawer');
+  accumDrawerBtn.addEventListener('click', () => {
+    accumDrawer.classList.toggle('hidden');
+    accumDrawerBtn.classList.toggle('open');
+  });
 
-  function calcCoast(){
-    const nestEgg = getClampedVal('c-nestegg', 0, 100000000, 400000);
-    const fireNum = getClampedVal('c-firenum', 1, 100000000, 2000000);
-    const r = getClampedVal('c-return', -50, 100, 7) / 100;
-    const fixedYears = getClampedVal('c-years', 1, 100, 25);
+  // ---------------- ACCUMULATION & COAST PLANNER ----------------
+  function calcAccumulation() {
+    const portfolio = getClampedVal('a-portfolio', 0, 100000000, 100000);
+    const contrib0 = getClampedVal('a-contrib', 0, 10000000, 20000);
+    const r = getClampedVal('a-return', -50, 100, 7) / 100;
+    const years = getClampedVal('a-years', 1, 100, 25);
+    const fireNum = getClampedVal('a-firenum', 0, 100000000, 1500000);
+    const contribGrowth = getClampedVal('a-contribgrowth', -50, 50, 0) / 100;
 
-    let resultEl = document.getElementById('c-result');
-    let subEl = document.getElementById('c-subresult');
-    let impliedYears = 0;
+    let rows = [];
+    let activeBal = portfolio;
+    let coastBal = portfolio;
+    let contrib = contrib0;
 
-    if(nestEgg <= 0){
-      resultEl.textContent = 'Never';
-      subEl.textContent = 'Nest egg is $0; compounding requires a starting balance.';
-      impliedYears = fixedYears;
-    } else if(fireNum <= nestEgg){
-      resultEl.textContent = 'Already at/above target';
-      subEl.textContent = '';
-      impliedYears = fixedYears;
-    } else if (r <= 0) {
-      resultEl.textContent = 'Never';
-      subEl.textContent = 'Return rate must be > 0% to grow without contributions.';
-      impliedYears = fixedYears;
-    } else {
-      impliedYears = Math.log(fireNum/nestEgg)/Math.log(1+r);
-      resultEl.textContent = impliedYears.toFixed(1)+' years';
-      subEl.textContent = 'to coast from '+fmt(nestEgg)+' to '+fmt(fireNum)+' at '+ (r*100).toFixed(1)+'% return, no more contributions';
+    for (let y = 0; y <= years; y++) {
+      rows.push({ year: y, active: activeBal, coast: coastBal });
+      activeBal = activeBal * (1 + r) + contrib;
+      coastBal = coastBal * (1 + r);
+      contrib *= (1 + contribGrowth);
     }
 
-    const projYears = Math.max(fixedYears, Math.ceil(impliedYears)+2, 10);
-    const rows = coastProjection(nestEgg, r, projYears);
-    const fixedRow = rows.find(x=>x.year===Math.round(fixedYears)) || rows[rows.length-1];
-    document.getElementById('c-fixedval').textContent = fmt(fixedRow.value)+' at year '+fixedRow.year;
+    // Stat 1: Projected Active Balance
+    document.getElementById('a-stat-proj').textContent = fmt(rows[years].active);
+    document.getElementById('a-stat-proj-sub').textContent = `at year ${years} with contributions`;
 
-    const colors = getThemeColors();
-    const ctx = document.getElementById('coastChart');
-    if(coastChart) coastChart.destroy();
-    coastChart = new Chart(ctx,{
-      type:'line',
-      data:{labels:rows.map(r=>r.year), datasets:[
-        {label:'Portfolio value',data:rows.map(r=>r.value),borderColor:'#4f9dff',backgroundColor:'rgba(79,157,255,.1)',fill:true,tension:.2,pointRadius:0},
-        {label:'FIRE target',data:rows.map(()=>fireNum),borderColor:'#33d69f',borderDash:[6,4],pointRadius:0}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},
-        scales:{x:{ticks:{color:colors.muted},grid:{color:colors.grid}},y:{ticks:{color:colors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:colors.grid}}}}
+    // Stat 2: Coast FIRE Status
+    const coastStatEl = document.getElementById('a-stat-coast');
+    const coastSubEl = document.getElementById('a-stat-coast-sub');
+
+    if (fireNum <= 0) {
+      coastStatEl.textContent = 'N/A';
+      coastSubEl.textContent = 'Set a FIRE Target in Advanced Options';
+    } else if (portfolio <= 0) {
+      coastStatEl.textContent = 'Never';
+      coastSubEl.textContent = 'Requires a starting balance to coast';
+    } else if (fireNum <= portfolio) {
+      coastStatEl.textContent = 'Achieved!';
+      coastSubEl.textContent = 'Current portfolio already hits target';
+    } else if (r <= 0) {
+      coastStatEl.textContent = 'Never';
+      coastSubEl.textContent = 'Return rate must be > 0%';
+    } else {
+      let reqYears = Math.log(fireNum / portfolio) / Math.log(1 + r);
+      coastStatEl.textContent = reqYears.toFixed(1) + ' Years';
+      coastSubEl.textContent = `to coast to ${fmt(fireNum)} at ${(r * 100).toFixed(1)}% return`;
+    }
+
+    // Milestones Table
+    let milestones = [1];
+    for (let i = 5; i <= years; i += 5) milestones.push(i);
+    if (!milestones.includes(years) && years > 0) milestones.push(years);
+
+    const tbody = document.querySelector('#a-table tbody');
+    tbody.innerHTML = milestones.map(m => {
+      const row = rows[m];
+      return `<tr><td>Year ${m}</td><td>${fmt(row.active)}</td><td>${fmt(row.coast)}</td></tr>`;
+    }).join('');
+
+    // Chart
+    const themeColors = getThemeColors();
+    const ctx = document.getElementById('accumChart');
+    if (accumChart) accumChart.destroy();
+
+    let datasets = [
+      {
+        label: 'Active Savings Path',
+        data: rows.map(r => r.active),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,.1)',
+        fill: true,
+        tension: 0.2,
+        pointRadius: 0
+      },
+      {
+        label: 'Coast Path (No Extra Savings)',
+        data: rows.map(r => r.coast),
+        borderColor: '#9aa3b2',
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.2,
+        pointRadius: 0
+      }
+    ];
+
+    if (fireNum > 0) {
+      datasets.push({
+        label: 'FIRE Target',
+        data: rows.map(() => fireNum),
+        borderColor: '#33d69f',
+        borderDash: [3, 3],
+        fill: false,
+        pointRadius: 0
+      });
+    }
+
+    accumChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: rows.map(r => r.year), datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: { 
+          legend: { labels: { color: themeColors.text } },
+          tooltip: defaultTooltipConfig
+        },
+        scales: {
+          x: { ticks: { color: themeColors.muted }, grid: { color: themeColors.grid } },
+          y: { ticks: { color: themeColors.muted, callback: v => '$' + (v / 1000).toFixed(0) + 'k' }, grid: { color: themeColors.grid } }
+        }
+      }
     });
   }
 
@@ -690,7 +830,17 @@
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
         datasets:rowsArr.map((rows,i)=>({label:labels[i],data:rows.map(r=>r.balance),
           borderColor:colors[i],backgroundColor:colors[i]+'22',fill:false,tension:.15,pointRadius:0}))},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:themeColors.text}}},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{
+          mode:'index',
+          intersect:false
+        },
+        plugins:{
+          legend:{labels:{color:themeColors.text}},
+          tooltip: defaultTooltipConfig
+        },
         scales:{x:{title:{display:true,text:'Year',color:themeColors.muted},ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},
           y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
@@ -704,72 +854,53 @@
     drawdownChart = new Chart(ctx,{
       type:'line',
       data:{labels:Array.from({length:maxLen},(_,i)=>i+1),
-        datasets:sampleTrajectories.map((rows)=>({
+        datasets:sampleTrajectories.map((rows, idx)=>({
+          label:`Simulation ${idx + 1}`,
           data:rows.map(r=>r.balance),
           borderColor: rows[rows.length-1].balance<=0? 'rgba(220,38,38,0.5)':'rgba(37,99,235,0.35)',
           borderWidth:1, pointRadius:0, fill:false
         }))},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{
+          mode:'nearest',
+          intersect:false
+        },
+        plugins:{
+          legend:{display:false},
+          tooltip: {
+            mode: 'nearest',
+            intersect: false,
+            callbacks: {
+              label: function(context) {
+                return `$${Math.round(context.parsed.y).toLocaleString()}`;
+              },
+              labelColor: function(context) {
+                const color = context.dataset.borderColor;
+                return {
+                  borderColor: color,
+                  backgroundColor: color
+                };
+              }
+            }
+          }
+        },
         scales:{x:{title:{display:true,text:'Year',color:themeColors.muted},ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},
           y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
     });
   }
 
-  // ---------------- GROWTH ----------------
-  function calcGrowth(){
-    const start = getClampedVal('g-start', 0, 100000000, 100000);
-    const contrib0 = getClampedVal('g-contrib', 0, 10000000, 20000);
-    const contribGrowth = getClampedVal('g-contribgrowth', -50, 50, 0) / 100;
-    const r = getClampedVal('g-return', -50, 100, 7) / 100;
-    const years = getClampedVal('g-years', 1, 100, 30);
-
-    let rows=[]; let balance=start; let contrib=contrib0;
-    for(let y=0;y<=years;y++){
-      rows.push({year:y, balance:balance, contrib: y>0?contrib:0});
-      balance = balance*(1+r) + contrib;
-      contrib *= (1+contribGrowth);
-    }
-
-    let milestones = [1];
-    for (let i = 5; i <= years; i += 5) {
-      milestones.push(i);
-    }
-    if (!milestones.includes(years) && years > 0) {
-      milestones.push(years);
-    }
-    const tbody = document.querySelector('#g-table tbody');
-    
-    tbody.innerHTML = milestones.map(m => {
-      const row = rows[m];
-      return `<tr><td>${m}</td><td>${fmt(row.balance)}</td><td>${fmt(row.contrib)}</td></tr>`;
-    }).join('');
-
-    const themeColors = getThemeColors();
-    const ctx = document.getElementById('growthChart');
-    if(growthChart) growthChart.destroy();
-    growthChart = new Chart(ctx,{
-      type:'line',
-      data:{labels:rows.map(r=>r.year), datasets:[
-        {label:'Portfolio balance',data:rows.map(r=>r.balance),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.2,pointRadius:0}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:themeColors.text}}},
-        scales:{x:{ticks:{color:themeColors.muted},grid:{color:themeColors.grid}},y:{ticks:{color:themeColors.muted,callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:themeColors.grid}}}}
-    });
-  }
-
   initCurrencyInputs();
 
-  document.getElementById('g-calc-btn').addEventListener('click', calcGrowth);
-  document.getElementById('c-calc-btn').addEventListener('click', calcCoast);
+  document.getElementById('a-calc-btn').addEventListener('click', calcAccumulation);
   document.getElementById('d-calc-btn').addEventListener('click', handleDrawdownCalculate);
   document.getElementById('d-compare-btn').addEventListener('click', compareSequences);
 
-  bindEnterKey('coast-inputs', calcCoast);
+  bindEnterKey('accum-inputs', calcAccumulation);
   bindEnterKey('drawdown-inputs', handleDrawdownCalculate);
-  bindEnterKey('growth-inputs', calcGrowth);
 
-  calcGrowth();
-  calcCoast();
+  calcAccumulation();
   calcDrawdown();
 
 })();
