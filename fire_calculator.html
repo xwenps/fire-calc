@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FIRE & Retirement Calculator</title>
+<title>FIRE &amp; Retirement Calculator</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -29,7 +29,6 @@
   .theme-toggle:hover{opacity:.8;transform:scale(1.05);}
   .theme-toggle svg { width: 18px; height: 18px; fill: currentColor; }
 
-  /* Sun/Moon visibility depending on theme */
   .sun-icon { display: none; }
   .moon-icon { display: block; }
   [data-theme="light"] .sun-icon { display: block; }
@@ -83,6 +82,15 @@
   .info-box{background:var(--panel2);border-left:3px solid var(--accent);padding:12px 14px;border-radius:6px;
     font-size:13px;color:var(--muted);margin-bottom:16px;}
   .hidden{display:none !important;}
+  .table-container {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 0 12px 12px;
+  }
   footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
 </style>
 </head>
@@ -94,10 +102,8 @@
     <p>Coast FIRE • Retirement Drawdown &amp; Monte Carlo • Portfolio Growth Projection</p>
   </div>
   <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle theme">
-    <!-- Sun Icon -->
-    <svg class="sun-icon" viewBox="0 0 24 24"><path d="M12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zM11 1h2v3h-2zm0 19h2v3h-2zM3.51 4.93l1.42 1.42 2.12-2.12-1.42-1.42zm14.85 14.85l1.42 1.42 2.12-2.12-1.42-1.42zM1 11h3v2H1zm19 0h3v2h-3zM4.93 20.49l1.42-1.42 2.12 2.12-1.42 1.42zm14.85-14.85l1.42-1.42 2.12 2.12-1.42 1.42z"/></svg>
-    <!-- Moon Icon -->
-    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M12.3 2c-4.99 0-9 4.01-9 9 0 3.25 1.76 6.09 4.39 7.64.44.26.54.85.22 1.25-.57.74-.2 1.81.65 2.11 1.25.43 2.61.66 4.01.66 5.52 0 10-4.48 10-10S17.82 2 12.3 2zm0 18c-1.12 0-2.19-.24-3.18-.68.61-.43 1.05-1.11 1.14-1.9.11-.98-.31-1.92-1.09-2.48-1.57-1.14-2.58-2.96-2.58-4.94 0-3.86 3.14-7 7-7s7 3.14 7 7-3.14 7-7 7z"/></svg>
+    <svg class="sun-icon" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.106a.75.75 0 010 1.06l-1.591 1.59a.75.75 0 11-1.06-1.06l1.59-1.59a.75.75 0 011.061 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.303 17.303a.75.75 0 011.06 1.06l-1.59 1.591a.75.75 0 11-1.061-1.06l1.59-1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061 1.06l1.59 1.591a.75.75 0 001.06-1.06l-1.589-1.591zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 6.697a.75.75 0 011.06-1.06l1.591 1.59a.75.75 0 11-1.06 1.06l-1.591-1.59 z"/></svg>
+    <svg class="moon-icon" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 109 9 8.97 8.97 0 00-3.463-.69.75.75 0 01-.818-.162 9.42 9.42 0 01-3.21 2.57 9.421 9.421 0 01-4.706 1.252 9.444 9.444 0 01-4.707-1.252 9.42 9.42 0 01-3.21-2.57.75.75 0 01-.162-.819A9 9 0 019.528 1.718z" clip-rule="evenodd"/></svg>
   </button>
 </header>
 
@@ -225,6 +231,18 @@
           <div class="stat-row" id="d-depyear-row"><span>Year of depletion (if any)</span><span id="d-depyear">--</span></div>
         </div>
         <div class="chart-wrap"><canvas id="drawdownChart" height="110"></canvas></div>
+        <div class="table-container hidden" id="d-returns-table-wrap">
+          <table id="d-returns-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th id="d-th-col1">Return (%)</th>
+                <th id="d-th-col2" class="hidden">Reversed Return (%)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -477,7 +495,7 @@
       if(balance<=0){balance=0; success=false; depYear=y;}
       const r = returns[y-1]!=null?returns[y-1]:returns[returns.length-1];
       balance *= (1+r);
-      rows.push({year:y,balance:balance,withdrawal:withdrawal});
+      rows.push({year:y,balance:balance,withdrawal:withdrawal,ret:r});
       withdrawal *= (1+inflation);
       if(!success) break;
     }
@@ -498,6 +516,7 @@
     document.getElementById('d-mc-sub').classList.add('hidden');
     document.getElementById('d-endbal-row').classList.remove('hidden');
     document.getElementById('d-depyear-row').classList.remove('hidden');
+    document.getElementById('d-returns-table-wrap').classList.remove('hidden');
   }
 
   function showMonteCarloUI(){
@@ -505,6 +524,36 @@
     document.getElementById('d-mc-sub').classList.remove('hidden');
     document.getElementById('d-endbal-row').classList.add('hidden');
     document.getElementById('d-depyear-row').classList.add('hidden');
+    document.getElementById('d-returns-table-wrap').classList.add('hidden');
+  }
+
+  function updateReturnsTable(returns1, returns2 = null, label1 = 'Return (%)', label2 = 'Reversed Return (%)') {
+    const wrap = document.getElementById('d-returns-table-wrap');
+    wrap.classList.remove('hidden');
+    const tbody = document.querySelector('#d-returns-table tbody');
+    const th1 = document.getElementById('d-th-col1');
+    const th2 = document.getElementById('d-th-col2');
+
+    th1.textContent = label1;
+    if (returns2) {
+      th2.classList.remove('hidden');
+      th2.textContent = label2;
+    } else {
+      th2.classList.add('hidden');
+    }
+
+    let html = '';
+    for (let i = 0; i < returns1.length; i++) {
+      let r1Val = (returns1[i] * 100).toFixed(2) + '%';
+      let rowHtml = `<tr><td>${i + 1}</td><td>${r1Val}</td>`;
+      if (returns2) {
+        let r2Val = (returns2[i] * 100).toFixed(2) + '%';
+        rowHtml += `<td>${r2Val}</td>`;
+      }
+      rowHtml += `</tr>`;
+      html += rowHtml;
+    }
+    tbody.innerHTML = html;
   }
 
   function calcDrawdown(){
@@ -529,6 +578,7 @@
     document.getElementById('d-endbal').textContent = fmt(res.rows[res.rows.length-1].balance);
     document.getElementById('d-depyear').textContent = res.depYear || 'N/A';
 
+    updateReturnsTable(returns, null, 'Return (%)');
     drawChart('drawdownChart', [res.rows], ['Portfolio balance']);
   }
 
@@ -611,6 +661,7 @@
     document.getElementById('d-endbal').textContent = fmt(fwd.rows[fwd.rows.length-1].balance)+' / '+fmt(rv.rows[rv.rows.length-1].balance);
     document.getElementById('d-depyear').textContent = (fwd.depYear||'N/A')+' / '+(rv.depYear||'N/A');
 
+    updateReturnsTable(base, rev, 'Forward Return (%)', 'Reversed Return (%)');
     drawChart('drawdownChart', [fwd.rows, rv.rows], ['Forward order ('+seqType+')','Reversed order']);
   }
 
