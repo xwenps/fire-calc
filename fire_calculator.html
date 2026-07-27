@@ -391,7 +391,11 @@
     let subEl = document.getElementById('c-subresult');
     let impliedYears = 0;
 
-    if(nestEgg <= 0 || fireNum <= nestEgg){
+    if(nestEgg <= 0){
+      resultEl.textContent = 'Never';
+      subEl.textContent = 'Nest egg is $0; compounding requires a starting balance.';
+      impliedYears = fixedYears;
+    } else if(fireNum <= nestEgg){
       resultEl.textContent = 'Already at/above target';
       subEl.textContent = '';
       impliedYears = fixedYears;
