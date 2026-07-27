@@ -337,6 +337,13 @@
           label += '$' + Math.round(context.parsed.y).toLocaleString();
         }
         return label;
+      },
+      labelColor: function(context) {
+        const color = context.dataset.borderColor;
+        return {
+          borderColor: color,
+          backgroundColor: color
+        };
       }
     }
   };
@@ -868,6 +875,13 @@
             callbacks: {
               label: function(context) {
                 return `$${Math.round(context.parsed.y).toLocaleString()}`;
+              },
+              labelColor: function(context) {
+                const color = context.dataset.borderColor;
+                return {
+                  borderColor: color,
+                  backgroundColor: color
+                };
               }
             }
           }
