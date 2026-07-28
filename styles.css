@@ -250,6 +250,39 @@ button.secondary {
   margin-top: 8px;
 }
 
+.toggle-group {
+  display: flex;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+
+.toggle-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 0;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
+.toggle-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
 .result-hero {
   font-size: 26px;
   font-weight: 700;

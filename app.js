@@ -13,6 +13,7 @@
   ];
 
   let accumChart, drawdownChart;
+  let currentFireMode = 'spend';
 
   const defaultTooltipConfig = {
     mode: 'index',
@@ -133,12 +134,59 @@
     accumDrawerBtn.classList.toggle('open');
   });
 
+  const toggleSpendBtn = document.getElementById('a-toggle-spend');
+  const toggleFireBtn = document.getElementById('a-toggle-fire');
+  const spendGroup = document.getElementById('a-spend-group');
+  const firenumGroup = document.getElementById('a-firenum-group');
+  const spendInput = document.getElementById('a-spend');
+  const firenumInput = document.getElementById('a-firenum');
+
+  function syncFireFromSpend() {
+    const spendVal = getCleanInputValue('a-spend');
+    const calculatedFire = spendVal * 25;
+    firenumInput.value = formatNumberWithCommas(calculatedFire);
+  }
+
+  toggleSpendBtn.addEventListener('click', () => {
+    currentFireMode = 'spend';
+    toggleSpendBtn.classList.add('active');
+    toggleFireBtn.classList.remove('active');
+    spendGroup.classList.remove('hidden');
+    firenumGroup.classList.add('hidden');
+    syncFireFromSpend();
+    calcAccumulation();
+  });
+
+  toggleFireBtn.addEventListener('click', () => {
+    currentFireMode = 'fire';
+    toggleFireBtn.classList.add('active');
+    toggleSpendBtn.classList.remove('active');
+    firenumGroup.classList.remove('hidden');
+    spendGroup.classList.add('hidden');
+    syncFireFromSpend();
+    calcAccumulation();
+  });
+
+  spendInput.addEventListener('input', () => {
+    if (currentFireMode === 'spend') {
+      syncFireFromSpend();
+    }
+  });
+
   function calcAccumulation() {
     const portfolio = getClampedVal('a-portfolio', 0, 100000000, 100000);
     const contrib0 = getClampedVal('a-contrib', 0, 10000000, 20000);
     const r = getClampedVal('a-return', -50, 100, 7) / 100;
     const years = getClampedVal('a-years', 1, 100, 25);
-    const fireNum = getClampedVal('a-firenum', 0, 100000000, 1500000);
+    
+    let fireNum;
+    if (currentFireMode === 'spend') {
+      const spend = getClampedVal('a-spend', 0, 10000000, 60000);
+      fireNum = spend * 25;
+    } else {
+      fireNum = getClampedVal('a-firenum', 0, 100000000, 1500000);
+    }
+
     const contribGrowth = getClampedVal('a-contribgrowth', -50, 50, 0) / 100;
 
     let rows = [];
@@ -161,7 +209,7 @@
 
     if (fireNum <= 0) {
       coastStatEl.textContent = 'N/A';
-      coastSubEl.textContent = 'Set a FIRE Target in Advanced Options';
+      coastSubEl.textContent = 'Set a Spend or FIRE Target in Advanced Options';
     } else if (portfolio <= 0) {
       coastStatEl.textContent = 'Never';
       coastSubEl.textContent = 'Requires a starting balance to coast';
@@ -263,7 +311,6 @@
     const btn = document.getElementById('d-calc-btn');
     const compareBtn = document.getElementById('d-compare-btn');
 
-    // Show volatility input only for random or Monte Carlo sequences
     if (seqType === 'random' || seqType === 'montecarlo') {
       stdGroup.classList.remove('hidden');
     } else {
@@ -572,7 +619,6 @@
     });
   }
 
-  // Clear active tooltips on mobile/touch screens when tapping outside of canvas elements
   document.addEventListener('touchstart', function(e) {
     const accumCanvas = document.getElementById('accumChart');
     const drawdownCanvas = document.getElementById('drawdownChart');
@@ -598,6 +644,7 @@
   }, { passive: true });
 
   initCurrencyInputs();
+  syncFireFromSpend();
 
   document.getElementById('a-calc-btn').addEventListener('click', calcAccumulation);
   document.getElementById('d-calc-btn').addEventListener('click', handleDrawdownCalculate);
@@ -606,7 +653,7 @@
   bindEnterKey('accum-inputs', calcAccumulation);
   bindEnterKey('drawdown-inputs', handleDrawdownCalculate);
 
-  toggleMonteCarloInput(); // Initialize visibility states on load
+  toggleMonteCarloInput();
   calcAccumulation();
   calcDrawdown();
 
