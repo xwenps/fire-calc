@@ -29,8 +29,10 @@
 }
 
 html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+  /* Strictly disable WebKit & standard font inflation on layout shifts */
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+  /* Maintain vertical scrollbar space to keep container width static */
   overflow-y: scroll;
 }
 
@@ -40,6 +42,7 @@ body {
   background: var(--bg);
   color: var(--text);
   transition: background .2s, color .2s;
+  -webkit-font-smoothing: antialiased;
 }
 
 header {
@@ -145,8 +148,15 @@ header p {
   margin: 0 auto;
 }
 
-.panel { display: none; }
-.panel.active { display: block; }
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+  /* Isolate panel layout shifts so WebKit text-scaling isn't triggered globally */
+  contain: layout style;
+}
 
 .grid {
   display: grid;
@@ -292,6 +302,8 @@ button.secondary {
   padding: 20px;
   position: relative;
   min-height: 320px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .success { color: var(--accent2); }
