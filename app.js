@@ -251,7 +251,7 @@
     } else {
       let reqYears = Math.log(fireNum / portfolio) / Math.log(1 + r);
       coastStatEl.textContent = reqYears.toFixed(1) + ' Years';
-      coastSubEl.textContent = `to coast to ${fmt(fireNum)} at ${(r * 100).toFixed(1)}% return`;
+      coastSubEl.textContent = `to coast to ${fmt(fireNum)}`;
     }
 
     let milestones = [1];
