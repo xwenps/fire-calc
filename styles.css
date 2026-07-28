@@ -29,10 +29,8 @@
 }
 
 html {
-  /* Strictly disable WebKit & standard font inflation on layout shifts */
   -webkit-text-size-adjust: 100% !important;
   text-size-adjust: 100% !important;
-  /* Maintain vertical scrollbar space to keep container width static */
   overflow-y: scroll;
 }
 
@@ -154,14 +152,19 @@ header p {
 
 .panel.active {
   display: block;
-  /* Isolate panel layout shifts so WebKit text-scaling isn't triggered globally */
   contain: layout style;
 }
 
+/* Enforce grid items to fit viewport width without overflowing */
 .grid {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 24px;
+  width: 100%;
+}
+
+.grid > * {
+  min-width: 0;
 }
 
 .card {
@@ -303,6 +306,7 @@ button.secondary {
   position: relative;
   min-height: 320px;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -311,6 +315,7 @@ button.secondary {
 
 .table-responsive {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -352,11 +357,15 @@ th {
 .table-container {
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
   margin-top: 20px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--panel);
   padding: 0 12px 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .drawer-toggle {

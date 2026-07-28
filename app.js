@@ -572,6 +572,31 @@
     });
   }
 
+  // Clear active tooltips on mobile/touch screens when tapping outside of canvas elements
+  document.addEventListener('touchstart', function(e) {
+    const accumCanvas = document.getElementById('accumChart');
+    const drawdownCanvas = document.getElementById('drawdownChart');
+
+    const touchedAccum = accumCanvas && accumCanvas.contains(e.target);
+    const touchedDrawdown = drawdownCanvas && drawdownCanvas.contains(e.target);
+
+    if (!touchedAccum && accumChart) {
+      accumChart.setActiveElements([], { x: 0, y: 0 });
+      if (accumChart.tooltip) {
+        accumChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+      }
+      accumChart.update();
+    }
+
+    if (!touchedDrawdown && drawdownChart) {
+      drawdownChart.setActiveElements([], { x: 0, y: 0 });
+      if (drawdownChart.tooltip) {
+        drawdownChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+      }
+      drawdownChart.update();
+    }
+  }, { passive: true });
+
   initCurrencyInputs();
 
   document.getElementById('a-calc-btn').addEventListener('click', calcAccumulation);
