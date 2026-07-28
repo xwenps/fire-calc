@@ -259,8 +259,16 @@
   function toggleMonteCarloInput(){
     const seqType = document.getElementById('d-seqtype').value;
     const settingsWrap = document.getElementById('d-mc-settings');
+    const stdGroup = document.getElementById('d-stdreturn-group');
     const btn = document.getElementById('d-calc-btn');
     const compareBtn = document.getElementById('d-compare-btn');
+
+    // Show volatility input only for random or Monte Carlo sequences
+    if (seqType === 'random' || seqType === 'montecarlo') {
+      stdGroup.classList.remove('hidden');
+    } else {
+      stdGroup.classList.add('hidden');
+    }
 
     if(seqType === 'montecarlo'){
       settingsWrap.classList.remove('hidden');
@@ -271,12 +279,21 @@
       compareBtn.classList.remove('hidden');
       btn.textContent = 'Simulate';
     }
+
+    toggleHistoricalInputs();
   }
 
   function toggleHistoricalInputs(){
+    const seqType = document.getElementById('d-seqtype').value;
     const isHistorical = document.getElementById('d-use-historical').checked;
-    document.getElementById('d-avgreturn').disabled = isHistorical;
-    document.getElementById('d-stdreturn').disabled = isHistorical;
+    
+    if (seqType === 'montecarlo' && isHistorical) {
+      document.getElementById('d-avgreturn').disabled = true;
+      document.getElementById('d-stdreturn').disabled = true;
+    } else {
+      document.getElementById('d-avgreturn').disabled = false;
+      document.getElementById('d-stdreturn').disabled = false;
+    }
   }
 
   function getHistoricalSequence(years) {
@@ -564,6 +581,7 @@
   bindEnterKey('accum-inputs', calcAccumulation);
   bindEnterKey('drawdown-inputs', handleDrawdownCalculate);
 
+  toggleMonteCarloInput(); // Initialize visibility states on load
   calcAccumulation();
   calcDrawdown();
 
