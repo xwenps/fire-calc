@@ -194,16 +194,45 @@
     let coastBal = portfolio;
     let contrib = contrib0;
 
-    for (let y = 0; y <= years; y++) {
-      rows.push({ year: y, active: activeBal, coast: coastBal });
+    let activeFireYear = null;
+
+    for (let y = 0; y <= 100; y++) {
+      if (y <= years) {
+        rows.push({ year: y, active: activeBal, coast: coastBal });
+      }
+
+      if (fireNum > 0 && activeBal >= fireNum && activeFireYear === null) {
+        activeFireYear = y;
+      }
+
       activeBal = activeBal * (1 + r) + contrib;
       coastBal = coastBal * (1 + r);
       contrib *= (1 + contribGrowth);
     }
 
+    // Set standard projected portfolio card
     document.getElementById('a-stat-proj').textContent = fmt(rows[years].active);
     document.getElementById('a-stat-proj-sub').textContent = `at year ${years} with contributions`;
 
+    // Calculate Active FIRE Target Card
+    const activeStatEl = document.getElementById('a-stat-active-fire');
+    const activeSubEl = document.getElementById('a-stat-active-fire-sub');
+
+    if (fireNum <= 0) {
+      activeStatEl.textContent = 'N/A';
+      activeSubEl.textContent = 'Set a Spend or FIRE Target in Advanced Options';
+    } else if (portfolio >= fireNum) {
+      activeStatEl.textContent = 'Achieved!';
+      activeSubEl.textContent = 'Current portfolio already hits target';
+    } else if (activeFireYear !== null) {
+      activeStatEl.textContent = activeFireYear + (activeFireYear === 1 ? ' Year' : ' Years');
+      activeSubEl.textContent = `to hit ${fmt(fireNum)} while saving`;
+    } else {
+      activeStatEl.textContent = '> 100 Years';
+      activeSubEl.textContent = `takes >100 years to reach ${fmt(fireNum)}`;
+    }
+
+    // Calculate Coast FIRE Target Card
     const coastStatEl = document.getElementById('a-stat-coast');
     const coastSubEl = document.getElementById('a-stat-coast-sub');
 
@@ -634,7 +663,7 @@
       accumChart.update();
     }
 
-    if (!touchedDrawdown && drawdownChart) {
+    if (!touchedDrawdown && drawdownCanvas) {
       drawdownChart.setActiveElements([], { x: 0, y: 0 });
       if (drawdownChart.tooltip) {
         drawdownChart.tooltip.setActiveElements([], { x: 0, y: 0 });

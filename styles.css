@@ -310,6 +310,10 @@ button.secondary {
   margin-bottom: 16px;
 }
 
+.stat-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .stat-card {
   background: var(--panel2);
   padding: 14px;
@@ -460,7 +464,10 @@ footer {
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+  }
+
+  .stat-grid-3 {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -507,7 +514,8 @@ footer {
 }
 
 @media (max-width: 480px) {
-  .stat-grid {
+  .stat-grid,
+  .stat-grid-3 {
     grid-template-columns: 1fr;
   }
 

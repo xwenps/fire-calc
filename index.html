@@ -47,16 +47,16 @@
           <div class="card" id="accum-inputs">
             <h3>Primary Inputs</h3>
             <label for="a-portfolio">Current portfolio ($)</label>
-            <input type="text" data-type="currency" id="a-portfolio" value="100000" min="0" max="100000000" step="1000">
+            <input type="text" data-type="currency" inputmode="decimal" id="a-portfolio" value="100000" min="0" max="100000000" step="1000">
             
             <label for="a-contrib">Annual contribution ($)</label>
-            <input type="text" data-type="currency" id="a-contrib" value="20000" min="0" max="10000000" step="100">
+            <input type="text" data-type="currency" inputmode="decimal" id="a-contrib" value="20000" min="0" max="10000000" step="100">
             
             <label for="a-return">Expected annual return (%)</label>
-            <input type="number" id="a-return" value="7" min="-50" max="100" step="0.1">
+            <input type="number" inputmode="decimal" id="a-return" value="7" min="-50" max="100" step="0.1">
             
             <label for="a-years">Target time horizon (Years)</label>
-            <input type="number" id="a-years" value="25" min="1" max="100" step="1">
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="a-years" value="25" min="1" max="100" step="1">
 
             <button class="drawer-toggle open" id="accum-drawer-btn" type="button">
               <span>Advanced &amp; FIRE Targets</span>
@@ -71,18 +71,18 @@
 
               <div id="a-spend-group">
                 <label for="a-spend">Projected Annual Spend ($)</label>
-                <input type="text" data-type="currency" id="a-spend" value="60000" min="0" max="10000000" step="1000">
+                <input type="text" data-type="currency" inputmode="decimal" id="a-spend" value="60000" min="0" max="10000000" step="1000">
                 <div class="result-sub" style="margin-top:2px;">Calculates target as 25x spend.</div>
               </div>
 
               <div id="a-firenum-group" class="hidden">
                 <label for="a-firenum">Target FIRE Number ($)</label>
-                <input type="text" data-type="currency" id="a-firenum" value="1500000" min="0" max="100000000" step="1000">
+                <input type="text" data-type="currency" inputmode="decimal" id="a-firenum" value="1500000" min="0" max="100000000" step="1000">
                 <div class="result-sub" style="margin-top:2px;">Optional: Leave empty or 0 to disable Coast FIRE metrics.</div>
               </div>
 
               <label for="a-contribgrowth">Contribution growth / year (%)</label>
-              <input type="number" id="a-contribgrowth" value="0" min="-50" max="50" step="0.1">
+              <input type="number" inputmode="decimal" id="a-contribgrowth" value="0" min="-50" max="50" step="0.1">
             </div>
 
             <button id="a-calc-btn">Calculate</button>
@@ -90,12 +90,21 @@
         </div>
 
         <div>
-          <div class="stat-grid">
+          <!-- Updated 3-card grid with active FIRE target in middle slot -->
+          <div class="stat-grid stat-grid-3">
             <div class="stat-card">
               <div class="label">Projected Portfolio</div>
               <div class="val" id="a-stat-proj">--</div>
               <div class="result-sub" id="a-stat-proj-sub">with contributions</div>
             </div>
+            
+            <!-- NEW SECOND CARD -->
+            <div class="stat-card">
+              <div class="label">FIRE Target (Active)</div>
+              <div class="val" id="a-stat-active-fire">--</div>
+              <div class="result-sub" id="a-stat-active-fire-sub">with active contributions</div>
+            </div>
+
             <div class="stat-card">
               <div class="label">Coast FIRE Status</div>
               <div class="val" id="a-stat-coast">--</div>
@@ -131,18 +140,18 @@
         <div class="card" id="drawdown-inputs">
           <h3>Inputs</h3>
           <label for="d-portfolio">Starting portfolio ($)</label>
-          <input type="text" data-type="currency" id="d-portfolio" value="1000000" min="0" max="100000000" step="1000">
+          <input type="text" data-type="currency" inputmode="decimal" id="d-portfolio" value="1000000" min="0" max="100000000" step="1000">
           <label for="d-years">Years in retirement</label>
-          <input type="number" id="d-years" value="30" min="1" max="100" step="1">
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="d-years" value="30" min="1" max="100" step="1">
           <label for="d-method">Withdrawal method</label>
           <select id="d-method">
             <option value="rate">% of initial portfolio</option>
             <option value="amount">Fixed dollar amount</option>
           </select>
           <label id="d-withdrawal-label" for="d-withdrawal">Withdrawal rate (%)</label>
-          <input type="text" data-type="currency" id="d-withdrawal" value="4" min="0.1" max="1000000" step="0.1">
+          <input type="text" data-type="currency" inputmode="decimal" id="d-withdrawal" value="4" min="0.1" max="1000000" step="0.1">
           <label for="d-inflation">Annual inflation (%)</label>
-          <input type="number" id="d-inflation" value="0" min="-10" max="50" step="0.1">
+          <input type="number" inputmode="decimal" id="d-inflation" value="0" min="-10" max="50" step="0.1">
           <label for="d-seqtype">Return sequence</label>
           <select id="d-seqtype">
             <option value="flat">Flat average return</option>
@@ -154,11 +163,11 @@
           
           <div id="d-return-inputs">
             <label for="d-avgreturn">Average annual return (%)</label>
-            <input type="number" id="d-avgreturn" value="7" min="-50" max="100" step="0.1">
+            <input type="number" inputmode="decimal" id="d-avgreturn" value="7" min="-50" max="100" step="0.1">
             
             <div id="d-stdreturn-group" class="hidden">
               <label for="d-stdreturn">Return volatility / std dev (%)</label>
-              <input type="number" id="d-stdreturn" value="15" min="0" max="100" step="0.1">
+              <input type="number" inputmode="decimal" id="d-stdreturn" value="15" min="0" max="100" step="0.1">
             </div>
           </div>
 
@@ -171,7 +180,7 @@
               <div class="hint" style="margin-left:24px;">Replaces avg/std normal distribution with actual historical block data.</div>
             </div>
             <label for="d-simcount">Number of simulations</label>
-            <input type="number" id="d-simcount" value="1000" min="100" max="50000" step="100">
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="d-simcount" value="1000" min="100" max="50000" step="100">
           </div>
           
           <button id="d-calc-btn">Simulate</button>
